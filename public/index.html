@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Portal Risiko Operasional</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#f5f3ef;--bg2:#ede9e3;--bg3:#e4dfd7;
+  --card:#ffffff;--card2:#fafaf8;
+  --border:#ddd8d0;--border2:#ccc6bc;
+  --text:#1a1714;--text2:#5c5750;--text3:#9c9590;
+  --acc:#2563eb;--acc2:#1d4ed8;--acct:#dbeafe;--accb:#93c5fd;
+  --green:#15803d;--greenbg:#dcfce7;--greenbdr:#86efac;
+  --amber:#b45309;--amberbg:#fef3c7;--amberbdr:#fcd34d;
+  --red:#dc2626;--redbg:#fee2e2;--redbdr:#fca5a5;
+  --purple:#7c3aed;--purplebg:#ede9fe;--purplebdr:#c4b5fd;
+  --cyan:#0e7490;--cyanbg:#ecfeff;--cyanbdr:#a5f3fc;
+  --hasil-bg:#eff6ff;
+  --sans:'Plus Jakarta Sans',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+  --r:8px;--r2:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6;min-height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* NAV */
+nav{background:var(--card);border-bottom:1px solid var(--border);padding:0 40px;display:flex;align-items:center;position:sticky;top:0;z-index:100;height:54px;gap:0}
+.logo{display:flex;align-items:center;gap:11px;margin-right:32px;text-decoration:none;flex-shrink:0}
+.logo-mark{width:30px;height:30px;background:var(--acc);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.logo-name{font-size:13px;font-weight:700;color:var(--text);letter-spacing:-.01em;line-height:1.2}
+.logo-sub{font-size:10px;color:var(--text3)}
+.nav-links{display:flex;gap:0}
+.nbtn{padding:0 15px;height:54px;font-size:12.5px;font-weight:500;color:var(--text2);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:var(--sans);transition:all .15s;display:flex;align-items:center;gap:7px;white-space:nowrap}
+.nbtn:hover{color:var(--text)}
+.nbtn.on{color:var(--acc);border-bottom-color:var(--acc);font-weight:600}
+.npill{background:var(--acc);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.ubadge{font-size:11px;color:var(--text3);font-family:var(--mono);background:var(--bg2);border:1px solid var(--border);padding:3px 10px;border-radius:20px}
+
+/* VIEWS */
+.view{display:none}
+.view.on{display:block;animation:fi .18s ease}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.page{max-width:1200px;margin:0 auto;padding:28px 40px}
+
+/* HERO */
+.hero{background:var(--card);border-bottom:1px solid var(--border);padding:34px 40px 28px}
+.hero-inner{max-width:1200px;margin:0 auto}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--acc);text-transform:uppercase;margin-bottom:9px}
+.hero-title{font-size:26px;font-weight:700;color:var(--text);letter-spacing:-.025em;line-height:1.22;margin-bottom:7px}
+.hero-title em{font-style:italic;color:var(--acc)}
+.hero-sub{font-size:13px;color:var(--text2);max-width:480px;line-height:1.75}
+.hstats{display:flex;gap:28px;margin-top:22px;padding-top:20px;border-top:1px solid var(--border);flex-wrap:wrap}
+.hs-val{font-size:24px;font-weight:700;font-family:var(--mono);color:var(--text);line-height:1}
+.hs-lbl{font-size:11px;color:var(--text3);margin-top:3px}
+.hdiv{width:1px;background:var(--border)}
+
+/* CHAT */
+.chat-wrap{max-width:720px;margin:0 auto}
+.chero{text-align:center;padding:28px 0 22px}
+.chero-ico{width:50px;height:50px;background:var(--acct);border:1px solid var(--accb);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+.chero h1{font-size:19px;font-weight:700;letter-spacing:-.02em;margin-bottom:7px}
+.chero p{font-size:13px;color:var(--text2);max-width:420px;margin:0 auto;line-height:1.75}
+.cmsgs{display:flex;flex-direction:column;gap:11px;margin-bottom:14px;min-height:20px}
+.msg{display:flex;gap:9px;align-items:flex-start}
+.msg.u{flex-direction:row-reverse}
+.mav{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:700}
+.msg.b .mav{background:var(--acct);border:1px solid var(--accb);color:var(--acc)}
+.msg.u .mav{background:var(--bg2);border:1px solid var(--border);color:var(--text2)}
+.mbub{max-width:84%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.7}
+.msg.b .mbub{background:var(--card);border:1px solid var(--border);color:var(--text);border-top-left-radius:3px}
+.msg.u .mbub{background:var(--acct);border:1px solid var(--accb);color:var(--acc2);border-top-right-radius:3px}
+.mbub b{color:var(--text);font-weight:600}
+.mbub i{color:var(--text2)}
+.vhl{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--acc);display:inline-block;margin:3px 0}
+.mvsub{font-size:12px;color:var(--text3);margin-top:4px}
+.mbub table{width:100%;border-collapse:collapse;margin-top:9px;font-size:12px}
+.mbub th{padding:6px 11px;text-align:left;color:var(--text2);border-bottom:1px solid var(--border);font-weight:600;font-size:10.5px;letter-spacing:.04em;background:var(--bg2)}
+.mbub td{padding:7px 11px;border-bottom:1px solid var(--border);color:var(--text2)}
+.mbub td.num{font-family:var(--mono);font-size:12px;color:var(--acc2);text-align:right;font-weight:500}
+.mbub tr:last-child td{border:none}
+.mtime{font-size:10px;color:var(--text3);margin-top:3px;font-family:var(--mono)}
+.msg.u .mtime{text-align:right}
+.sugs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.sug{padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--text2);font-size:12px;cursor:pointer;font-family:var(--sans);transition:all .15s}
+.sug:hover{border-color:var(--acc);color:var(--acc);background:var(--acct)}
+.cinput-wrap{position:sticky;bottom:0;padding:12px 0 4px;background:linear-gradient(transparent,var(--bg) 35%)}
+.cform{display:flex;gap:8px;background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:5px 5px 5px 15px;box-shadow:0 2px 10px rgba(0,0,0,.06);transition:border-color .2s}
+.cform:focus-within{border-color:var(--acc)}
+.cinp{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:13.5px;font-family:var(--sans);padding:6px 0}
+.cinp::placeholder{color:var(--text3)}
+.sbtn{width:36px;height:36px;border-radius:10px;background:var(--acc);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s}
+.sbtn:hover{background:var(--acc2)}
+.chint{text-align:center;font-size:10.5px;color:var(--text3);margin-top:7px}
+
+/* DATAMART TABLE */
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.sw{position:relative;flex:1;min-width:200px}
+.sw input{width:100%;padding:8px 12px 8px 33px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:13px;font-family:var(--sans);outline:none;transition:border .15s}
+.sw input:focus{border-color:var(--acc)}
+.sw input::placeholder{color:var(--text3)}
+.si{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none}
+.fsel{padding:7px 11px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);color:var(--text2);font-size:12.5px;font-family:var(--sans);outline:none;cursor:pointer}
+.fsel:focus{border-color:var(--acc)}
+.clbl{font-size:11.5px;color:var(--text3);margin-left:auto;font-family:var(--mono);white-space:nowrap}
+.touter{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.04)}
+.tscroll{overflow-x:auto;max-height:calc(100vh - 210px)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead{position:sticky;top:0;z-index:2}
+th{padding:10px 14px;text-align:left;font-weight:600;color:var(--text2);background:var(--bg2);border-bottom:1px solid var(--border);white-space:nowrap;font-size:11px;letter-spacing:.05em;text-transform:uppercase}
+td{padding:9px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border:none}
+tr:hover td{background:var(--bg)}
+.td-k{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.td-p{color:var(--text);font-weight:500;white-space:normal;min-width:200px;max-width:340px;line-height:1.4}
+.td-n{font-family:var(--mono);font-size:12px;text-align:right;color:var(--text2)}
+.td-nl{font-family:var(--mono);font-size:12px;text-align:right;color:var(--acc2);font-weight:600;background:var(--acct)}
+.bh{background:var(--acct);color:var(--acc2);font-size:10px;font-weight:700;padding:2px 9px;border-radius:10px}
+.bp{background:var(--bg2);color:var(--text3);font-size:10px;font-weight:700;padding:2px 9px;border-radius:10px}
+.lsrc{color:var(--acc);font-size:11px;text-decoration:none;opacity:.75}
+.lsrc:hover{opacity:1;text-decoration:underline}
+tr.hr td{background:var(--hasil-bg)}
+tr.hr:hover td{background:#dbeafe}
+tr.hr td.td-p{color:var(--acc2);font-weight:600}
+
+/* SUMMARY CARDS */
+.scards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:22px}
+.sc{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:15px 18px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.sc-lbl{font-size:11.5px;color:var(--text2);margin-bottom:8px;line-height:1.4}
+.sc-val{font-size:23px;font-weight:700;font-family:var(--mono);color:var(--text);line-height:1}
+.sc-sub{font-size:11px;color:var(--text3);margin-top:5px;display:flex;align-items:center;gap:5px}
+.tup{color:var(--red);font-size:11px}
+.tdn{color:var(--green);font-size:11px}
+
+/* ══════════════════════════════════════════
+   LAPORAN & DOKUMEN
+══════════════════════════════════════════ */
+.lap-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.lap-title{font-size:17px;font-weight:700;color:var(--text);letter-spacing:-.01em}
+.lap-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.lap-search-wrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lap-search{position:relative}
+.lap-search input{padding:8px 12px 8px 33px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:13px;font-family:var(--sans);outline:none;width:220px;transition:border .15s}
+.lap-search input:focus{border-color:var(--acc)}
+.lap-search input::placeholder{color:var(--text3)}
+.lap-search .si{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none}
+
+/* category filter pills */
+.cat-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.cpill{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans);transition:all .15s}
+.cpill:hover{border-color:var(--acc);color:var(--acc)}
+.cpill.on{font-weight:600}
+
+/* file cards grid */
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.fcard{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:18px 20px;display:flex;align-items:flex-start;gap:14px;text-decoration:none;transition:all .18s;box-shadow:0 1px 4px rgba(0,0,0,.04);cursor:pointer}
+.fcard:hover{border-color:var(--acc);box-shadow:0 4px 18px rgba(37,99,235,.1);transform:translateY(-2px)}
+.fext{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;letter-spacing:.02em;flex-shrink:0}
+.fcard-body{flex:1;min-width:0}
+.fcard-name{font-size:13px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:5px}
+.fcard-desc{font-size:12px;color:var(--text3);line-height:1.55;margin-bottom:9px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.fcard-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fcat{font-size:10px;font-weight:700;padding:2px 9px;border-radius:10px}
+.fsize{font-size:11px;color:var(--text3)}
+.ftgl{font-size:11px;color:var(--text3)}
+.farrow{flex-shrink:0;margin-top:11px;color:var(--text3);transition:color .15s}
+.fcard:hover .farrow{color:var(--acc)}
+.fempty{padding:52px;text-align:center;color:var(--text3);grid-column:1/-1}
+.fempty svg{margin-bottom:12px;opacity:.3}
+.fempty h3{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.fempty p{font-size:12px}
+
+/* ══════════════════════════════════════════
+   GATE (akses awal)
+══════════════════════════════════════════ */
+#gate{position:fixed;inset:0;background:var(--bg);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+#gate.hidden{display:none}
+.gate-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:36px 34px;max-width:380px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center}
+.gate-ico{width:46px;height:46px;background:var(--acct);border:1px solid var(--accb);border-radius:13px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.gate-card h2{font-size:16px;font-weight:700;color:var(--text);margin-bottom:7px;letter-spacing:-.01em}
+.gate-card p{font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:20px}
+.gate-form{display:flex;flex-direction:column;gap:10px}
+.gate-form input{padding:11px 14px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-size:13.5px;font-family:var(--sans);outline:none;transition:border .15s;text-align:center;letter-spacing:.04em}
+.gate-form input:focus{border-color:var(--acc)}
+.gate-form button{padding:11px 14px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:background .15s}
+.gate-form button:hover{background:var(--acc2)}
+.gate-err{font-size:11.5px;color:var(--red);min-height:15px;margin-top:-2px}
+.gate-note{font-size:10.5px;color:var(--text3);margin-top:18px;line-height:1.6;padding-top:14px;border-top:1px solid var(--border)}
+
+/* ══════════════════════════════════════════
+   DATA WARNING (dari update_data.py)
+══════════════════════════════════════════ */
+.wbadge{font-size:11px;color:var(--amber);font-family:var(--mono);background:var(--amberbg);border:1px solid var(--amberbdr);padding:3px 10px;border-radius:20px;cursor:pointer;display:flex;align-items:center;gap:5px}
+.wbadge:hover{filter:brightness(.97)}
+.wpanel{position:fixed;top:60px;right:24px;width:380px;max-width:calc(100vw - 32px);background:var(--card);border:1px solid var(--amberbdr);border-radius:var(--r2);box-shadow:0 8px 30px rgba(0,0,0,.12);z-index:200;display:none;overflow:hidden}
+.wpanel.on{display:block}
+.wpanel-h{background:var(--amberbg);padding:12px 16px;font-size:12.5px;font-weight:700;color:var(--amber);display:flex;align-items:center;justify-content:space-between}
+.wpanel-h button{background:none;border:none;color:var(--amber);cursor:pointer;font-size:16px;line-height:1;padding:0}
+.wpanel-list{max-height:300px;overflow-y:auto;padding:8px}
+.wpanel-item{font-size:11.5px;color:var(--text2);padding:9px 10px;border-bottom:1px solid var(--border);line-height:1.55}
+.wpanel-item:last-child{border:none}
+
+/* nilai data yang belum diisi (beda makna dari nilai 0) */
+.dna{color:var(--text3);font-style:italic;font-size:11px;background:var(--bg2);padding:2px 8px;border-radius:8px;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<!-- ══ GATE ══════════════════════════════════════════════════ -->
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-ico">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <h2>Portal Risiko Operasional</h2>
+    <p>Akses internal — masukkan kode akses untuk melanjutkan.</p>
+    <div class="gate-form">
+      <input type="password" id="gate-pw" placeholder="Kode akses" onkeydown="if(event.key==='Enter')checkGate()"/>
+      <button onclick="checkGate()">Masuk</button>
+      <div class="gate-err" id="gate-err"></div>
+    </div>
+    <div class="gate-note">Kode akses ini bukan kontrol keamanan utama — hanya penyaring akses ringan. Data tetap berada di file publik dan dapat diakses siapa pun yang punya tautan langsung ke <code>data.js</code>. Untuk perlindungan sebenarnya, aktifkan Vercel Deployment Protection atau setara.</div>
+  </div>
+</div>
+
+<nav>
+  <a class="logo" href="#">
+    <div class="logo-mark">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+    </div>
+    <div>
+      <div class="logo-name">Portal Risiko Operasional</div>
+      <div class="logo-sub">Manajemen Risiko Operasional</div>
+    </div>
+  </a>
+  <div class="nav-links">
+    <button class="nbtn on" onclick="showView('chat',this)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Pencarian Cepat
+    </button>
+    <button class="nbtn" onclick="showView('data',this)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+      Datamart <span class="npill" id="pill-dm">—</span>
+    </button>
+    <button class="nbtn" onclick="showView('laporan',this)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Laporan &amp; Dokumen <span class="npill" id="pill-lap">—</span>
+    </button>
+  </div>
+  <div class="nav-right">
+    <span class="wbadge" id="wbadge" style="display:none" onclick="toggleWPanel()">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span id="wbadge-n">0</span> peringatan data
+    </span>
+    <span class="ubadge" id="ulbl">Memuat…</span>
+  </div>
+</nav>
+
+<div class="wpanel" id="wpanel">
+  <div class="wpanel-h">
+    <span>Peringatan kualitas data</span>
+    <button onclick="toggleWPanel()">&times;</button>
+  </div>
+  <div class="wpanel-list" id="wpanel-list"></div>
+</div>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow">Manajemen Risiko Operasional</div>
+    <h1 class="hero-title">Cari data &amp; dokumen langsung,<br><em>tanpa perlu tanya siapapun.</em></h1>
+    <p class="hero-sub">Portal self-service untuk seluruh divisi — cari parameter berdasarkan kata kunci, lihat tabel lengkap, atau download laporan dari satu tempat.</p>
+    <div class="hstats">
+      <div class="hstat"><div class="hs-val" id="st-par">—</div><div class="hs-lbl">Parameter Dipantau</div></div>
+      <div class="hdiv"></div>
+      <div class="hstat"><div class="hs-val" id="st-per">—</div><div class="hs-lbl">Periode Tersedia</div></div>
+      <div class="hdiv"></div>
+      <div class="hstat"><div class="hs-val" id="st-hasil">—</div><div class="hs-lbl">Indikator Hasil</div></div>
+      <div class="hdiv"></div>
+      <div class="hstat"><div class="hs-val" id="st-docs">—</div><div class="hs-lbl">Dokumen Tersedia</div></div>
+      <div class="hdiv"></div>
+      <div class="hstat"><div class="hs-val" id="st-lp">—</div><div class="hs-lbl">Periode Terbaru</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TANYA DATA ══════════════════════════════════════════════ -->
+<div class="view on" id="view-chat">
+<div class="page"><div class="chat-wrap">
+  <div class="chero" id="chero">
+    <div class="chero-ico">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </div>
+    <h1>Cari parameter pakai kata kunci</h1>
+    <p>Ketik kata kunci yang ada di nama parameter — sistem akan mencocokkan dengan parameter di datamart. Untuk pertanyaan kompleks, gunakan tab Datamart.</p>
+  </div>
+  <div class="cmsgs" id="cmsgs"></div>
+  <div class="sugs" id="sugs">
+    <span class="sug" onclick="ask(this.textContent)">Total AO Mekaar bulan ini?</span>
+    <span class="sug" onclick="ask(this.textContent)">Turn over AO berapa?</span>
+    <span class="sug" onclick="ask(this.textContent)">PKM Face Detect tren 6 bulan</span>
+    <span class="sug" onclick="ask(this.textContent)">Kelengkapan KTP & FP4?</span>
+    <span class="sug" onclick="ask(this.textContent)">Semua indikator Hasil</span>
+    <span class="sug" onclick="ask(this.textContent)">NOC/AO terbaru?</span>
+  </div>
+  <div class="cinput-wrap">
+    <div class="cform">
+      <input class="cinp" id="cinp" placeholder="Cari kata kunci, mis. 'NOC' atau 'turn over'…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"/>
+      <button class="sbtn" onclick="send()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+    <div class="chint">Pencocokan kata kunci otomatis · Jawaban mengikuti data datamart terbaru · Internal use only</div>
+  </div>
+</div></div>
+</div>
+
+<!-- ══ DATAMART TABLE ══════════════════════════════════════════ -->
+<div class="view" id="view-data">
+<div class="page">
+  <div class="scards" id="scards"></div>
+  <div class="toolbar">
+    <div class="sw">
+      <svg class="si" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Cari parameter, bagian…" id="tsearch" oninput="renderTbl()"/>
+    </div>
+    <select class="fsel" id="fj" onchange="renderTbl()"><option value="">Semua Jenis</option><option>Hasil</option><option>Pembentuk</option></select>
+    <select class="fsel" id="fb" onchange="renderTbl()"><option value="">Semua Bagian</option></select>
+    <select class="fsel" id="fp" onchange="renderTbl()"><option value="">Semua Periode</option></select>
+    <span class="clbl" id="tclbl">—</span>
+  </div>
+  <div class="touter"><div class="tscroll">
+    <table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+  </div></div>
+</div>
+</div>
+
+<!-- ══ LAPORAN & DOKUMEN ══════════════════════════════════════ -->
+<div class="view" id="view-laporan">
+<div class="page">
+  <div class="lap-header">
+    <div>
+      <div class="lap-title">Laporan &amp; Dokumen</div>
+      <div class="lap-sub">Klik kartu untuk membuka atau mengunduh dokumen</div>
+    </div>
+    <div class="lap-search-wrap">
+      <div class="lap-search">
+        <svg class="si" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Cari dokumen…" id="lsearch" oninput="renderLap()"/>
+      </div>
+    </div>
+  </div>
+  <div class="cat-pills" id="cat-pills"></div>
+  <div class="fgrid" id="fgrid"></div>
+</div>
+</div>
+
+<script src="data.js"></script>
+<script>
+// ── STATE ─────────────────────────────────────────────────────
+var DB = { rows:[], periods:[], laporan:[], updated:'' };
+var activeCat = 'Semua';
+
+// ── EXT CONFIG ───────────────────────────────────────────────
+var EXT = {
+  pdf:  {bg:'#fee2e2',color:'#dc2626',label:'PDF'},
+  xlsx: {bg:'#dcfce7',color:'#15803d',label:'XLS'},
+  docx: {bg:'#dbeafe',color:'#1d4ed8',label:'DOC'},
+  pptx: {bg:'#fef3c7',color:'#b45309',label:'PPT'},
+  link: {bg:'#ede9fe',color:'#7c3aed',label:'WEB'},
+};
+var CAT_COLORS = {
+  Kebijakan: {bg:'#fee2e2',color:'#dc2626',border:'#fca5a5'},
+  Laporan:   {bg:'#fef3c7',color:'#b45309',border:'#fcd34d'},
+  Template:  {bg:'#dbeafe',color:'#1d4ed8',border:'#93c5fd'},
+  SOP:       {bg:'#dcfce7',color:'#15803d',border:'#86efac'},
+  Referensi: {bg:'#ede9fe',color:'#7c3aed',border:'#c4b5fd'},
+  Dashboard: {bg:'#ecfeff',color:'#0e7490',border:'#a5f3fc'},
+  Training:  {bg:'#fdf4ff',color:'#a21caf',border:'#e879f9'},
+};
+
+// ── BOOT ─────────────────────────────────────────────────────
+function boot() {
+  if (!window.DATAMART) { document.getElementById('ulbl').textContent = 'Data tidak tersedia'; return; }
+  DB.rows    = window.DATAMART.rows    || [];
+  DB.periods = window.DATAMART.periods || [];
+  DB.laporan = window.DATAMART.laporan || [];
+  DB.updated = window.DATAMART.updated || '';
+  var lp = DB.periods[DB.periods.length-1] || '—';
+
+  document.getElementById('ulbl').textContent    = 'Update: ' + DB.updated;
+  document.getElementById('pill-dm').textContent = DB.rows.length;
+  document.getElementById('pill-lap').textContent= DB.laporan.length;
+  document.getElementById('st-par').textContent  = DB.rows.length;
+  document.getElementById('st-per').textContent  = DB.periods.length;
+  document.getElementById('st-hasil').textContent= DB.rows.filter(function(r){return r.jen==='Hasil'}).length;
+  document.getElementById('st-docs').textContent = DB.laporan.length;
+  document.getElementById('st-lp').textContent   = lp;
+
+  fillFilters(); renderTbl(); renderCards(); renderLap(); renderWarnings();
+
+  botMsg('Data sudah dimuat — <b>'+DB.rows.length+' parameter</b>, '
+    +'<b>'+DB.laporan.length+' dokumen</b>, periode terbaru <b>'+lp+'</b>.<br><br>'
+    +'Ketik kata kunci yang ada di nama parameter, contoh: <i>"Total AO Mekaar"</i> atau <i>"tren PKM Face Detect 6 bulan"</i>');
+}
+
+// ── NAV ──────────────────────────────────────────────────────
+function showView(id,btn){
+  document.querySelectorAll('.view').forEach(function(v){v.classList.remove('on')});
+  document.querySelectorAll('.nbtn').forEach(function(b){b.classList.remove('on')});
+  document.getElementById('view-'+id).classList.add('on');
+  btn.classList.add('on');
+}
+
+// ── SUMMARY CARDS ────────────────────────────────────────────
+function renderCards(){
+  var lp=DB.periods[DB.periods.length-1];
+  var pp=DB.periods.length>=2?DB.periods[DB.periods.length-2]:null;
+  var hasil=DB.rows.filter(function(r){return r.jen==='Hasil'}).slice(0,4);
+  document.getElementById('scards').innerHTML=hasil.map(function(r){
+    var v=r[lp],trend='';
+    if(pp){var pv=r[pp];if(v&&pv){var vn=parseFloat(String(v).replace(/[%,]/g,'')),pn=parseFloat(String(pv).replace(/[%,]/g,''));if(!isNaN(vn)&&!isNaN(pn)&&pn!==0){var d=((vn-pn)/Math.abs(pn)*100).toFixed(1),up=vn>pn;trend='<span class="'+(up?'tup':'tdn')+'">'+(up?'▲':'▼')+' '+Math.abs(d)+'%</span>';}}}
+    return'<div class="sc"><div class="sc-lbl">'+esc(r.par)+'</div><div class="sc-val">'+(v?v:'<span class="dna" style="font-size:13px">belum tersedia</span>')+'</div><div class="sc-sub">'+lp+' '+trend+'</div></div>';
+  }).join('');
+}
+
+// ── TABLE ────────────────────────────────────────────────────
+function fillFilters(){
+  var bags=[...new Set(DB.rows.map(function(r){return r.bag}))].filter(Boolean);
+  document.getElementById('fb').innerHTML='<option value="">Semua Bagian</option>'+bags.map(function(b){return'<option>'+b+'</option>'}).join('');
+  document.getElementById('fp').innerHTML='<option value="">Semua Periode</option>'+[...DB.periods].reverse().map(function(p){return'<option>'+p+'</option>'}).join('');
+}
+function renderTbl(){
+  var q=document.getElementById('tsearch').value.toLowerCase();
+  var fj=document.getElementById('fj').value,fb=document.getElementById('fb').value,pf=document.getElementById('fp').value;
+  var lp=DB.periods[DB.periods.length-1];
+  var filtered=DB.rows.filter(function(r){
+    return(!q||(r.par+r.bag+r.key).toLowerCase().includes(q))&&(!fj||r.jen===fj)&&(!fb||r.bag===fb);
+  });
+  document.getElementById('tclbl').textContent=filtered.length+' baris';
+  var showP=pf?[pf]:DB.periods.slice(-6);
+  document.getElementById('thead').innerHTML='<tr><th>Primary Key</th><th>Parameter</th><th>Jenis</th>'+showP.map(function(p){return'<th style="text-align:right">'+(p===lp&&!pf?'<span style="color:var(--acc)">'+p+' ★</span>':p)+'</th>'}).join('')+'<th>Sumber</th></tr>';
+  if(!filtered.length){document.getElementById('tbody').innerHTML='<tr><td colspan="'+(4+showP.length)+'" style="padding:48px;text-align:center;color:var(--text3)">Tidak ada data sesuai filter</td></tr>';return;}
+  document.getElementById('tbody').innerHTML=filtered.map(function(r){
+    var isH=r.jen==='Hasil';
+    var badge=isH?'<span class="bh">Hasil</span>':'<span class="bp">Pembentuk</span>';
+    var cells=showP.map(function(p){var v=r[p],isL=p===lp&&!pf;return'<td class="'+(isL?'td-nl':'td-n')+'">'+(v||'<span class="dna">belum tersedia</span>')+'</td>';}).join('');
+    var src=r.lnk?'<a class="lsrc" href="'+r.lnk+'" target="_blank" rel="noopener">Buka ↗</a>':'<span style="color:var(--text3)">—</span>';
+    return'<tr class="'+(isH?'hr':'')+'"><td class="td-k">'+esc(r.key)+'</td><td class="td-p">'+esc(r.par)+'</td><td>'+badge+'</td>'+cells+'<td>'+src+'</td></tr>';
+  }).join('');
+}
+
+// ── LAPORAN ──────────────────────────────────────────────────
+function renderLap(cat){
+  if(cat!==undefined) activeCat=cat;
+  var q=(document.getElementById('lsearch').value||'').toLowerCase();
+
+  // build category pills
+  var cats=['Semua',...new Set(DB.laporan.map(function(f){return f.kat}))];
+  document.getElementById('cat-pills').innerHTML=cats.map(function(c){
+    var cc=CAT_COLORS[c]||{};
+    var isOn=c===activeCat;
+    var style=isOn&&cc.bg
+      ?'background:'+cc.bg+';color:'+cc.color+';border-color:'+cc.border+';'
+      :'';
+    return'<button class="cpill'+(isOn?' on':'')+'" onclick="renderLap(\''+c+'\')" style="'+style+'">'+c+'</button>';
+  }).join('');
+
+  // filter + scoring (pakai keyword matching yang sama dengan Pencarian Cepat,
+  // jadi toleran urutan kata dan kata kunci sebagian, bukan cuma substring persis)
+  var kws=q?kwds(q):[];
+  var scoredDocs=DB.laporan.map(function(f){
+    var t=(f.nama+' '+f.desc+' '+f.kat).toLowerCase();
+    var s=0;
+    if(kws.length){
+      kws.forEach(function(k){if(t.includes(k))s+=k.length});
+    } else {
+      s=1; // tanpa query, semua dokumen tampil (skor sama)
+    }
+    return{f:f,s:s};
+  }).filter(function(x){
+    var mc=activeCat==='Semua'||x.f.kat===activeCat;
+    return x.s>0&&mc;
+  }).sort(function(a,b){return b.s-a.s});
+  var filtered=scoredDocs.map(function(x){return x.f});
+
+  var grid=document.getElementById('fgrid');
+  if(!filtered.length){
+    grid.innerHTML='<div class="fempty"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><h3>Tidak ada dokumen</h3><p>Coba ubah filter atau kata kunci pencarian</p></div>';
+    return;
+  }
+
+  grid.innerHTML=filtered.map(function(f){
+    var ext=EXT[f.tipe]||{bg:'#f0f0f0',color:'#666',label:'FILE'};
+    var cc=CAT_COLORS[f.kat]||{bg:'#f0f0f0',color:'#666',border:'#ccc'};
+    var isLink=f.tipe==='link';
+    var arrowSvg=isLink
+      ?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>'
+      :'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+    return'<a class="fcard" href="'+esc(f.link)+'" target="_blank" rel="noopener">'
+      +'<div class="fext" style="background:'+ext.bg+';color:'+ext.color+'">'+ext.label+'</div>'
+      +'<div class="fcard-body">'
+        +'<div class="fcard-name">'+esc(f.nama)+'</div>'
+        +'<div class="fcard-desc">'+esc(f.desc)+'</div>'
+        +'<div class="fcard-meta">'
+          +'<span class="fcat" style="background:'+cc.bg+';color:'+cc.color+'">'+esc(f.kat)+'</span>'
+          +(f.ukuran?'<span class="fsize">'+esc(f.ukuran)+'</span>':'')
+          +(f.tgl?'<span class="ftgl">·&nbsp;'+esc(f.tgl)+'</span>':'')
+        +'</div>'
+      +'</div>'
+      +'<div class="farrow">'+arrowSvg+'</div>'
+      +'</a>';
+  }).join('');
+}
+
+// ── CHAT ─────────────────────────────────────────────────────
+function send(){var inp=document.getElementById('cinp'),q=inp.value.trim();if(!q)return;inp.value='';ask(q);}
+function ask(q){
+  if(!q)return;
+  userMsg(q);
+  document.getElementById('chero').style.display='none';
+  document.getElementById('sugs').style.display='none';
+  setTimeout(function(){botMsg(query(q))},300);
+}
+function query(q){
+  var ql=q.toLowerCase(),lp=DB.periods[DB.periods.length-1],pp=DB.periods.length>=2?DB.periods[DB.periods.length-2]:null;
+  var epM=ql.match(/\b(20\d{4})\b/),ep=epM?epM[1]:null;
+  var wT=/tren|trend|histori|semua periode|semua bulan/.test(ql);
+  var nMM=ql.match(/(\d+)\s*bulan/),nM=nMM?parseInt(nMM[1]):null;
+  if(/semua.*(hasil|pembentuk)|tampilkan.*(hasil|pembentuk)/.test(ql)){
+    var jt=/hasil/.test(ql)?'Hasil':'Pembentuk';
+    var jr=DB.rows.filter(function(r){return r.jen===jt});
+    return tblR(jr,ep||lp,'Semua indikator <b>'+jt+'</b> — '+jr.length+' parameter — periode <b>'+(ep||lp)+'</b>:');
+  }
+  var kws=kwds(ql);
+  var scored=DB.rows.map(function(r){var t=(r.par+' '+r.bag).toLowerCase(),s=0;kws.forEach(function(k){if(t.includes(k))s+=k.length});return{r:r,s:s}}).filter(function(x){return x.s>0}).sort(function(a,b){return b.s-a.s});
+  var docMatches=scoreDocs(kws);
+  if(!scored.length){
+    if(docMatches.length)return docCardsHtml(docMatches,'Tidak ada parameter yang cocok, tapi ditemukan <b>'+docMatches.length+' dokumen</b> terkait <b>"'+esc(q)+'"</b>:');
+    return'Maaf, tidak ditemukan parameter atau dokumen yang cocok dengan <b>"'+esc(q)+'"</b>.<br><br>Coba kata kunci yang ada di nama parameter atau dokumen, atau buka tab <b>Datamart</b> / <b>Laporan &amp; Dokumen</b>.';
+  }
+  var top=scored[0].r,others=scored.slice(1,4).map(function(x){return x.r}),tgtP=ep||lp;
+  var docSuffix=docMatches.length?'<br><br>'+docCardsHtml(docMatches.slice(0,3),'Dokumen terkait:'):'';
+  if(wT||nM){
+    var n=nM?Math.min(nM,DB.periods.length):Math.min(6,DB.periods.length),ps=DB.periods.slice(-n);
+    var rws=scored.slice(0,(scored.length>1&&scored[0].s===scored[1].s)?3:1).map(function(x){return x.r});
+    if(rws.length===1){
+      var ro=rws[0],ht='<b>'+esc(ro.par)+'</b> — tren <b>'+n+' periode terakhir</b>:<table><tr><th>Periode</th><th>Nilai</th></tr>';
+      ps.forEach(function(p){ht+='<tr><td>'+p+'</td><td class="num">'+(ro[p]||'<span class="dna">belum tersedia</span>')+'</td></tr>'});
+      ht+='</table>';
+      if(others.length)ht+='<br><span style="font-size:11.5px;color:var(--text3)">Terkait: '+others.map(function(o){return'<i>'+esc(o.par)+'</i>'}).join(', ')+'</span>';
+      return ht+docSuffix;
+    }
+    return tblR(rws,tgtP,rws.length+' parameter cocok:')+docSuffix;
+  }
+  if(scored.length===1||scored[0].s>scored[1].s*1.4){
+    var val=top[tgtP],ht2='<b>'+esc(top.par)+'</b>'+(top.bag?' <span style="font-size:11px;color:var(--text3)">('+esc(top.bag)+')</span>':'')+'<br>';
+    if(val){ht2+='<span class="vhl">'+val+'</span> <span style="font-size:11px;color:var(--text3)">per '+tgtP+'</span>'}
+    else{ht2+='<span class="dna">Data belum tersedia untuk periode '+tgtP+'</span>'}
+    if(pp&&!ep){var pval=top[pp];if(pval&&val){var vn2=parseFloat(String(val).replace(/[%,]/g,'')),pn2=parseFloat(String(pval).replace(/[%,]/g,''));if(!isNaN(vn2)&&!isNaN(pn2)){var d2=vn2-pn2,pct=pn2!==0?Math.abs(d2/pn2*100).toFixed(1)+'%':'',col=d2>0?'var(--red)':'var(--green)';ht2+='<div class="mvsub">Sebelumnya ('+pp+'): <b>'+pval+'</b> &nbsp;<span style="color:'+col+'">'+(d2>0?'▲':'▼')+' '+pct+'</span></div>';}}}
+    if(others.length)ht2+='<br><span style="font-size:11.5px;color:var(--text3)">Terkait: '+others.map(function(o){return'<i>'+esc(o.par)+'</i>'}).join(', ')+'</span>';
+    return ht2+docSuffix;
+  }
+  return tblR(scored.slice(0,6).map(function(x){return x.r}),tgtP,'<b>'+scored.length+'</b> parameter cocok — 6 teratas (periode <b>'+tgtP+'</b>):')+docSuffix;
+}
+function scoreDocs(kws){
+  if(!kws.length)return[];
+  return DB.laporan.map(function(f){
+    var t=(f.nama+' '+f.desc+' '+f.kat).toLowerCase(),s=0;
+    kws.forEach(function(k){if(t.includes(k))s+=k.length});
+    return{f:f,s:s};
+  }).filter(function(x){return x.s>0}).sort(function(a,b){return b.s-a.s}).map(function(x){return x.f});
+}
+function docCardsHtml(docs,title){
+  var ht='<span style="font-size:12.5px">'+title+'</span><div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">';
+  docs.forEach(function(f){
+    var ext=EXT[f.tipe]||{bg:'#f0f0f0',color:'#666',label:'FILE'};
+    ht+='<a href="'+esc(f.link)+'" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;text-decoration:none;background:var(--card)">'
+      +'<span style="flex-shrink:0;width:30px;height:30px;border-radius:8px;background:'+ext.bg+';color:'+ext.color+';font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">'+ext.label+'</span>'
+      +'<span style="flex:1;min-width:0"><span style="display:block;font-size:12px;font-weight:600;color:var(--text)">'+esc(f.nama)+'</span><span style="display:block;font-size:10.5px;color:var(--text3)">'+esc(f.kat)+(f.tgl?' · '+esc(f.tgl):'')+'</span></span>'
+      +'</a>';
+  });
+  return ht+'</div>';
+}
+function kwds(ql){var stops=['berapa','nilai','data','angka','bulan','ini','terakhir','terbaru','periode','tampilkan','lihat','cari','dong','nih','tren','trend','total','dari','yang','untuk','pada','di','dan','atau','dengan','nya'];return ql.split(/\s+/).map(function(w){return w.replace(/[^a-z0-9]/g,'')}).filter(function(w){return w.length>1&&!stops.includes(w)});}
+function tblR(rows,p,title){var ht='<span style="font-size:12.5px">'+title+'</span><table><tr><th>Parameter</th><th>Jenis</th><th>Nilai ('+p+')</th></tr>';rows.forEach(function(r){var v=r[p];ht+='<tr><td>'+esc(r.par)+'</td><td>'+esc(r.jen)+'</td><td class="num">'+(v||'<span class="dna">belum tersedia</span>')+'</td></tr>'});return ht+'</table>';}
+function userMsg(txt){var t=now(),el=document.createElement('div');el.className='msg u';el.innerHTML='<div><div class="mbub">'+esc(txt)+'</div><div class="mtime">'+t+'</div></div><div class="mav">U</div>';document.getElementById('cmsgs').appendChild(el);el.scrollIntoView({behavior:'smooth'});}
+function botMsg(html){var t=now(),el=document.createElement('div');el.className='msg b';el.innerHTML='<div class="mav">🔍</div><div><div class="mbub">'+html+'</div><div class="mtime">'+t+'</div></div>';document.getElementById('cmsgs').appendChild(el);el.scrollIntoView({behavior:'smooth'});}
+function now(){return new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── PERINGATAN KUALITAS DATA ──────────────────────────────────
+function renderWarnings(){
+  var w=window.DATAMART.warnings||[];
+  if(!w.length)return;
+  document.getElementById('wbadge').style.display='flex';
+  document.getElementById('wbadge-n').textContent=w.length;
+  document.getElementById('wpanel-list').innerHTML=w.map(function(msg){
+    return'<div class="wpanel-item">'+esc(msg)+'</div>';
+  }).join('');
+}
+function toggleWPanel(){document.getElementById('wpanel').classList.toggle('on');}
+
+// ── GATE AKSES ─────────────────────────────────────────────────
+// Catatan jujur: ini BUKAN keamanan sesungguhnya. Password ada di kode
+// sisi klien (siapapun bisa lihat lewat 'view source' atau DevTools),
+// dan data.js bisa diakses langsung tanpa lewat gate ini sama sekali.
+// Ini hanya penyaring akses ringan untuk mencegah klik tidak sengaja
+// dari orang yang menemukan link tanpa sengaja. Untuk proteksi nyata,
+// pakai Vercel Deployment Protection / auth di level server.
+var GATE_PASSWORD = 'risiko2026'; // ganti sesuai kebutuhan kantor
+function checkGate(){
+  var input=document.getElementById('gate-pw').value;
+  if(input===GATE_PASSWORD){
+    sessionStorage.setItem('mro_gate_ok','1');
+    document.getElementById('gate').classList.add('hidden');
+  } else {
+    document.getElementById('gate-err').textContent='Kode akses salah. Coba lagi.';
+    document.getElementById('gate-pw').value='';
+    document.getElementById('gate-pw').focus();
+  }
+}
+(function initGate(){
+  if(sessionStorage.getItem('mro_gate_ok')==='1'){
+    document.getElementById('gate').classList.add('hidden');
+  }
+})();
+
+document.addEventListener('DOMContentLoaded', boot);
+</script>
+</body>
+</html>
