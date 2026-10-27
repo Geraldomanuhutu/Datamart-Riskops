@@ -133,8 +133,10 @@ tr.hr td.td-p{color:var(--acc2);font-weight:600}
 .sc-lbl{font-size:11.5px;color:var(--text2);margin-bottom:8px;line-height:1.4}
 .sc-val{font-size:23px;font-weight:700;font-family:var(--mono);color:var(--text);line-height:1}
 .sc-sub{font-size:11px;color:var(--text3);margin-top:5px;display:flex;align-items:center;gap:5px}
-.tup{color:var(--red);font-size:11px}
-.tdn{color:var(--green);font-size:11px}
+.tbad{color:var(--red);font-size:11px}
+.tgood{color:var(--green);font-size:11px}
+.tneu{color:var(--text3);font-size:11px}
+.ssrc{color:var(--text3);font-size:11px}
 
 /* ══════════════════════════════════════════
    LAPORAN & DOKUMEN
@@ -421,10 +423,30 @@ function renderCards(){
   var pp=DB.periods.length>=2?DB.periods[DB.periods.length-2]:null;
   var hasil=DB.rows.filter(function(r){return r.jen==='Hasil'}).slice(0,4);
   document.getElementById('scards').innerHTML=hasil.map(function(r){
-    var v=r[lp],trend='';
-    if(pp){var pv=r[pp];if(v&&pv){var vn=parseFloat(String(v).replace(/[%,]/g,'')),pn=parseFloat(String(pv).replace(/[%,]/g,''));if(!isNaN(vn)&&!isNaN(pn)&&pn!==0){var d=((vn-pn)/Math.abs(pn)*100).toFixed(1),up=vn>pn;trend='<span class="'+(up?'tup':'tdn')+'">'+(up?'▲':'▼')+' '+Math.abs(d)+'%</span>';}}}
+    var v=r[lp],trend=pp?trendHtml(r,lp,pp):'';
     return'<div class="sc"><div class="sc-lbl">'+esc(r.par)+'</div><div class="sc-val">'+(v?v:'<span class="dna" style="font-size:13px">belum tersedia</span>')+'</div><div class="sc-sub">'+lp+' '+trend+'</div></div>';
   }).join('');
+}
+
+// ── TREN ─────────────────────────────────────────────────────
+// Nilai numerik presisi penuh dari data.js (r.num). Fallback parseFloat untuk data.js lama.
+function numOf(r,p){
+  if(r.num)return r.num[p]==null?null:r.num[p];
+  var n=parseFloat(r[p]);return isNaN(n)?null:n;
+}
+function fmtId(n,dec){return n.toLocaleString('id-ID',{minimumFractionDigits:dec,maximumFractionDigits:dec});}
+// Hijau = membaik, merah = memburuk, abu-abu = arah tidak ditentukan (Pembentuk / Netral).
+// Satuan % ditampilkan sebagai selisih poin persen (pp), selain itu perubahan relatif.
+function trendHtml(r,p,pp){
+  var v=numOf(r,p),pv=numOf(r,pp);
+  if(v===null||pv===null)return'';
+  var d=v-pv;
+  if(d===0)return'<span class="tneu">= tetap</span>';
+  var txt=r.sat==='%'?fmtId(Math.abs(d)*100,2)+' pp':pv!==0?fmtId(Math.abs(d/pv*100),1)+'%':'';
+  var good=r.arah==='naik'?d>0:r.arah==='turun'?d<0:null;
+  var cls=good===null?'tneu':good?'tgood':'tbad';
+  var tip=r.arah==='naik'?'Naik = baik':r.arah==='turun'?'Turun = baik':'Arah baik tidak ditentukan';
+  return'<span class="'+cls+'" title="'+tip+'">'+(d>0?'▲':'▼')+' '+txt+'</span>';
 }
 
 // ── TABLE ────────────────────────────────────────────────────
@@ -448,9 +470,19 @@ function renderTbl(){
     var isH=r.jen==='Hasil';
     var badge=isH?'<span class="bh">Hasil</span>':'<span class="bp">Pembentuk</span>';
     var cells=showP.map(function(p){var v=r[p],isL=p===lp&&!pf;return'<td class="'+(isL?'td-nl':'td-n')+'">'+(v||'<span class="dna">belum tersedia</span>')+'</td>';}).join('');
-    var src=r.lnk?'<a class="lsrc" href="'+r.lnk+'" target="_blank" rel="noopener">Buka ↗</a>':'<span style="color:var(--text3)">—</span>';
+    var src=srcHtml(r);
     return'<tr class="'+(isH?'hr':'')+'"><td class="td-k">'+esc(r.key)+'</td><td class="td-p">'+esc(r.par)+'</td><td>'+badge+'</td>'+cells+'<td>'+src+'</td></tr>';
   }).join('');
+}
+
+// Link hanya kalau URL absolut http(s); nama sistem sumber tampil sebagai teks biasa.
+// r.lnk = format data.js lama (sebelum ada src/url).
+function srcHtml(r){
+  var raw=r.url!==undefined?r.url:(r.lnk||''),url=/^https?:\/\//i.test(raw)?raw:'';
+  var name=r.src!==undefined?r.src:(url?'':r.lnk||'');
+  if(url)return'<a class="lsrc" href="'+esc(url)+'" target="_blank" rel="noopener">'+(name?esc(name):'Buka')+' ↗</a>';
+  if(name)return'<span class="ssrc">'+esc(name)+'</span>';
+  return'<span style="color:var(--text3)">—</span>';
 }
 
 // ── LAPORAN ──────────────────────────────────────────────────
@@ -473,13 +505,8 @@ function renderLap(cat){
   // jadi toleran urutan kata dan kata kunci sebagian, bukan cuma substring persis)
   var kws=q?kwds(q):[];
   var scoredDocs=DB.laporan.map(function(f){
-    var t=(f.nama+' '+f.desc+' '+f.kat).toLowerCase();
-    var s=0;
-    if(kws.length){
-      kws.forEach(function(k){if(t.includes(k))s+=k.length});
-    } else {
-      s=1; // tanpa query, semua dokumen tampil (skor sama)
-    }
+    // tanpa query, semua dokumen tampil (skor sama)
+    var s=kws.length?kwScore(kws,f.nama+' '+f.desc+' '+f.kat):1;
     return{f:f,s:s};
   }).filter(function(x){
     var mc=activeCat==='Semua'||x.f.kat===activeCat;
@@ -536,7 +563,7 @@ function query(q){
     return tblR(jr,ep||lp,'Semua indikator <b>'+jt+'</b> — '+jr.length+' parameter — periode <b>'+(ep||lp)+'</b>:');
   }
   var kws=kwds(ql);
-  var scored=DB.rows.map(function(r){var t=(r.par+' '+r.bag).toLowerCase(),s=0;kws.forEach(function(k){if(t.includes(k))s+=k.length});return{r:r,s:s}}).filter(function(x){return x.s>0}).sort(function(a,b){return b.s-a.s});
+  var scored=DB.rows.map(function(r){return{r:r,s:kwScore(kws,r.par+' '+r.bag)}}).filter(function(x){return x.s>0}).sort(function(a,b){return b.s-a.s});
   var docMatches=scoreDocs(kws);
   if(!scored.length){
     if(docMatches.length)return docCardsHtml(docMatches,'Tidak ada parameter yang cocok, tapi ditemukan <b>'+docMatches.length+' dokumen</b> terkait <b>"'+esc(q)+'"</b>:');
@@ -560,7 +587,7 @@ function query(q){
     var val=top[tgtP],ht2='<b>'+esc(top.par)+'</b>'+(top.bag?' <span style="font-size:11px;color:var(--text3)">('+esc(top.bag)+')</span>':'')+'<br>';
     if(val){ht2+='<span class="vhl">'+val+'</span> <span style="font-size:11px;color:var(--text3)">per '+tgtP+'</span>'}
     else{ht2+='<span class="dna">Data belum tersedia untuk periode '+tgtP+'</span>'}
-    if(pp&&!ep){var pval=top[pp];if(pval&&val){var vn2=parseFloat(String(val).replace(/[%,]/g,'')),pn2=parseFloat(String(pval).replace(/[%,]/g,''));if(!isNaN(vn2)&&!isNaN(pn2)){var d2=vn2-pn2,pct=pn2!==0?Math.abs(d2/pn2*100).toFixed(1)+'%':'',col=d2>0?'var(--red)':'var(--green)';ht2+='<div class="mvsub">Sebelumnya ('+pp+'): <b>'+pval+'</b> &nbsp;<span style="color:'+col+'">'+(d2>0?'▲':'▼')+' '+pct+'</span></div>';}}}
+    if(pp&&!ep){var pval=top[pp];if(pval&&val){ht2+='<div class="mvsub">Sebelumnya ('+pp+'): <b>'+pval+'</b> &nbsp;'+trendHtml(top,tgtP,pp)+'</div>';}}
     if(others.length)ht2+='<br><span style="font-size:11.5px;color:var(--text3)">Terkait: '+others.map(function(o){return'<i>'+esc(o.par)+'</i>'}).join(', ')+'</span>';
     return ht2+docSuffix;
   }
@@ -569,9 +596,7 @@ function query(q){
 function scoreDocs(kws){
   if(!kws.length)return[];
   return DB.laporan.map(function(f){
-    var t=(f.nama+' '+f.desc+' '+f.kat).toLowerCase(),s=0;
-    kws.forEach(function(k){if(t.includes(k))s+=k.length});
-    return{f:f,s:s};
+    return{f:f,s:kwScore(kws,f.nama+' '+f.desc+' '+f.kat)};
   }).filter(function(x){return x.s>0}).sort(function(a,b){return b.s-a.s}).map(function(x){return x.f});
 }
 function docCardsHtml(docs,title){
@@ -585,12 +610,25 @@ function docCardsHtml(docs,title){
   });
   return ht+'</div>';
 }
-function kwds(ql){var stops=['berapa','nilai','data','angka','bulan','ini','terakhir','terbaru','periode','tampilkan','lihat','cari','dong','nih','tren','trend','total','dari','yang','untuk','pada','di','dan','atau','dengan','nya'];return ql.split(/\s+/).map(function(w){return w.replace(/[^a-z0-9]/g,'')}).filter(function(w){return w.length>1&&!stops.includes(w)});}
+// Pecah teks jadi kata di setiap karakter non-alfanumerik: "NOC/AO" → ["noc","ao"], bukan "nocao".
+function toks(s){return String(s).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);}
+function kwds(ql){var stops=['berapa','nilai','data','angka','bulan','ini','terakhir','terbaru','periode','tampilkan','lihat','cari','dong','nih','tren','trend','dari','yang','untuk','pada','di','dan','atau','dengan','nya'];return toks(ql).filter(function(w){return w.length>1&&!stops.includes(w)});}
+// Skor kecocokan: kata utuh = panjang kata; kata ≥4 huruf boleh cocok sebagian (mis. "cair" → "pencairan").
+// Token pendek seperti "ao" hanya cocok sebagai kata utuh. Kalau semua kata kunci muncul berurutan, skor ×2.
+function kwScore(kws,text){
+  var tt=toks(text),s=0;
+  kws.forEach(function(k){
+    if(tt.indexOf(k)>=0)s+=k.length;
+    else if(k.length>=4&&tt.some(function(t){return t.indexOf(k)>=0}))s+=k.length-1;
+  });
+  if(s&&kws.length>1&&(' '+tt.join(' ')+' ').indexOf(' '+kws.join(' ')+' ')>=0)s*=2;
+  return s;
+}
 function tblR(rows,p,title){var ht='<span style="font-size:12.5px">'+title+'</span><table><tr><th>Parameter</th><th>Jenis</th><th>Nilai ('+p+')</th></tr>';rows.forEach(function(r){var v=r[p];ht+='<tr><td>'+esc(r.par)+'</td><td>'+esc(r.jen)+'</td><td class="num">'+(v||'<span class="dna">belum tersedia</span>')+'</td></tr>'});return ht+'</table>';}
 function userMsg(txt){var t=now(),el=document.createElement('div');el.className='msg u';el.innerHTML='<div><div class="mbub">'+esc(txt)+'</div><div class="mtime">'+t+'</div></div><div class="mav">U</div>';document.getElementById('cmsgs').appendChild(el);el.scrollIntoView({behavior:'smooth'});}
 function botMsg(html){var t=now(),el=document.createElement('div');el.className='msg b';el.innerHTML='<div class="mav">🔍</div><div><div class="mbub">'+html+'</div><div class="mtime">'+t+'</div></div>';document.getElementById('cmsgs').appendChild(el);el.scrollIntoView({behavior:'smooth'});}
 function now(){return new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 // ── PERINGATAN KUALITAS DATA ──────────────────────────────────
 function renderWarnings(){
