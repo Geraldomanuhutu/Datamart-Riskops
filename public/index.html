@@ -551,7 +551,7 @@ function renderLap(cat){
   var kws=q?kwds(q):[];
   var scoredDocs=DB.laporan.map(function(f){
     // tanpa query, semua dokumen tampil (skor sama)
-    var s=kws.length?kwScore(kws,f.nama+' '+f.desc+' '+f.kat):1;
+    var s=kws.length?kwScore(kws,f.nama,f.desc+' '+f.kat):1;
     return{f:f,s:s};
   }).filter(function(x){
     var mc=activeCat==='Semua'||x.f.kat===activeCat;
@@ -599,16 +599,17 @@ function ask(q){
 }
 function query(q){
   var ql=q.toLowerCase(),lp=DB.periods[DB.periods.length-1],pp=DB.periods.length>=2?DB.periods[DB.periods.length-2]:null;
-  var epM=ql.match(/\b(20\d{4})\b/),ep=epM?epM[1]:null;
+  var ep=parsePeriod(ql);
   var wT=/tren|trend|histori|semua periode|semua bulan/.test(ql);
-  var nMM=ql.match(/(\d+)\s*bulan/),nM=nMM?parseInt(nMM[1]):null;
+  // "6 bulan" hanya berarti tren kalau ada kata tren/terakhir — "masa kerja ≤ 3 bulan" bukan permintaan tren
+  var nMM=ql.match(/(\d+)\s*bulan/),nM=nMM&&(wT||/bulan\s+terakhir/.test(ql))?parseInt(nMM[1]):null;
   if(/semua.*(hasil|pembentuk)|tampilkan.*(hasil|pembentuk)/.test(ql)){
     var jt=/hasil/.test(ql)?'Hasil':'Pembentuk';
     var jr=DB.rows.filter(function(r){return r.jen===jt});
     return tblR(jr,ep||lp,'Semua indikator <b>'+jt+'</b> — '+jr.length+' parameter — periode <b>'+(ep||lp)+'</b>:');
   }
   var kws=kwds(ql);
-  var scored=DB.rows.map(function(r){return{r:r,s:kwScore(kws,r.par+' '+r.bag)}}).filter(function(x){return x.s>0}).sort(function(a,b){return b.s-a.s});
+  var scored=DB.rows.map(function(r){return{r:r,s:kwScore(kws,r.par,r.bag)}}).filter(function(x){return x.s>0}).sort(function(a,b){return b.s-a.s});
   var docMatches=scoreDocs(kws);
   if(!scored.length){
     if(docMatches.length)return docCardsHtml(docMatches,'Tidak ada parameter yang cocok, tapi ditemukan <b>'+docMatches.length+' dokumen</b> terkait <b>"'+esc(q)+'"</b>:');
@@ -631,8 +632,11 @@ function query(q){
   if(scored.length===1||scored[0].s>scored[1].s*1.4){
     var val=top[tgtP],ht2='<b>'+esc(top.par)+'</b>'+(top.bag?' <span style="font-size:11px;color:var(--text3)">('+esc(top.bag)+')</span>':'')+'<br>';
     if(val){ht2+='<span class="vhl">'+esc(val)+'</span>'+stPill(top,tgtP)+' <span style="font-size:11px;color:var(--text3)">per '+tgtP+'</span>'}
+    else if(DB.periods.indexOf(tgtP)<0){ht2+='<span class="dna">Periode '+esc(tgtP)+' belum ada di datamart (data tersedia '+DB.periods[0]+'–'+lp+')</span>'}
     else{ht2+='<span class="dna">Data belum tersedia untuk periode '+tgtP+'</span>'}
-    if(pp&&!ep){var pval=top[pp];if(pval&&val){ht2+='<div class="mvsub">Sebelumnya ('+pp+'): <b>'+pval+'</b> &nbsp;'+trendHtml(top,tgtP,pp)+'</div>';}}
+    // pembanding = periode tepat sebelum periode yang ditampilkan
+    var ci=DB.periods.indexOf(tgtP),cp=ci>0?DB.periods[ci-1]:null;
+    if(cp){var pval=top[cp];if(pval&&val){ht2+='<div class="mvsub">Sebelumnya ('+cp+'): <b>'+esc(pval)+'</b> &nbsp;'+trendHtml(top,tgtP,cp)+'</div>';}}
     if(others.length)ht2+='<br><span style="font-size:11.5px;color:var(--text3)">Terkait: '+others.map(function(o){return'<i>'+esc(o.par)+'</i>'}).join(', ')+'</span>';
     return ht2+docSuffix;
   }
@@ -641,7 +645,7 @@ function query(q){
 function scoreDocs(kws){
   if(!kws.length)return[];
   return DB.laporan.map(function(f){
-    return{f:f,s:kwScore(kws,f.nama+' '+f.desc+' '+f.kat)};
+    return{f:f,s:kwScore(kws,f.nama,f.desc+' '+f.kat)};
   }).filter(function(x){return x.s>0}).sort(function(a,b){return b.s-a.s}).map(function(x){return x.f});
 }
 function docCardsHtml(docs,title){
@@ -656,8 +660,40 @@ function docCardsHtml(docs,title){
   return ht+'</div>';
 }
 // Pecah teks jadi kata di setiap karakter non-alfanumerik: "NOC/AO" → ["noc","ao"], bukan "nocao".
-function toks(s){return String(s).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);}
-function kwds(ql){var stops=['berapa','nilai','data','angka','bulan','ini','terakhir','terbaru','periode','tampilkan','lihat','cari','dong','nih','tren','trend','dari','yang','untuk','pada','di','dan','atau','dengan','nya'];return toks(ql).filter(function(w){return w.length>1&&!stops.includes(w)});}
+// ≤/≥/</> jadi kata "kurangdari"/"lebihdari" supaya "masa kerja kurang dari 3 bulan" cocok ke "Masa Kerja ≤ 3 Bulan".
+function toks(s){
+  s=String(s).toLowerCase().replace(/≤|<=?/g,' kurangdari ').replace(/≥|>=?/g,' lebihdari ');
+  return s.split(/[^a-z0-9]+/).filter(Boolean);
+}
+// Nama bulan → nomor bulan, untuk pertanyaan seperti "jumlah AO Mei 2026".
+var MONTHS={jan:1,januari:1,january:1,feb:2,februari:2,february:2,mar:3,maret:3,march:3,apr:4,april:4,mei:5,may:5,jun:6,juni:6,june:6,jul:7,juli:7,july:7,agu:8,agt:8,ags:8,agus:8,agustus:8,aug:8,august:8,sep:9,sept:9,september:9,okt:10,oktober:10,oct:10,october:10,nov:11,november:11,des:12,desember:12,dec:12,december:12};
+// Periode yang diminta (YYYYMM) dari "202605", "Mei 2026", "mei 26", "05/2026", "2026-05", atau "Mei" saja
+// (= Mei terakhir yang ada di data). null kalau tidak menyebut periode.
+function parsePeriod(ql){
+  var m=ql.match(/\b(20\d{2})(0[1-9]|1[0-2])\b/);if(m)return m[1]+m[2];
+  m=ql.match(/\b(0?[1-9]|1[0-2])[\/\-.](20\d{2})\b/);if(m)return m[2]+('0'+m[1]).slice(-2);
+  m=ql.match(/\b(20\d{2})[\/\-.](0?[1-9]|1[0-2])\b/);if(m)return m[1]+('0'+m[2]).slice(-2);
+  var tt=toks(ql);
+  for(var i=0;i<tt.length;i++){
+    var mo=MONTHS[tt[i]];if(!mo)continue;
+    var mm=('0'+mo).slice(-2),y=tt[i+1]||'';
+    if(/^20\d{2}$/.test(y))return y+mm;
+    if(/^\d{2}$/.test(y))return '20'+y+mm;
+    var hit=DB.periods.filter(function(p){return p.slice(4)===mm});
+    return hit.length?hit[hit.length-1]:null;
+  }
+  return null;
+}
+function kwds(ql){
+  var stops=['berapa','berapakah','brp','nilai','data','angka','bulan','bln','tahun','thn','ini','terakhir','terbaru','sekarang','periode','tampilkan','lihat','cari','dong','nih','sih','ya','kah','tren','trend','dari','yang','untuk','pada','di','ke','dan','atau','dengan','nya','ada','apa','apakah','gimana','bagaimana','tolong','mohon','minta','info','saja','aja','per','sampai','hingga','mau','tau','tahu','cuy','bro','gan','kak'];
+  // nama bulan, tahun, dan periode sudah ditangani parsePeriod(), jangan ikut jadi kata kunci
+  return toks(ql).filter(function(w){return (w.length>1||/^\d$/.test(w))&&!stops.includes(w)&&!MONTHS[w]&&!/^20\d{2}(\d{2})?$/.test(w)});
+}
+// Sinonim kata kunci → kata di nama parameter, dengan bobot. "jumlah AO" paling cocok ke "Total AO Mekaar",
+// baru ke "Jml AO ..." (bobot lebih kecil).
+var SYN={jumlah:{total:1,jml:0.6},jml:{jumlah:1,total:0.7},total:{jumlah:0.7,jml:0.7},nasabah:{noc:1,noa:0.8},banyak:{total:0.7,jml:0.7},
+  kurang:{kurangdari:1},dibawah:{kurangdari:1},maksimal:{kurangdari:1},lebih:{lebihdari:1},diatas:{lebihdari:1},minimal:{lebihdari:1}};
+function alts(k){var a={};a[k]=1;var s=SYN[k]||{};for(var w in s)a[w]=s[w];return a;}
 // Semua kata utuh di nama parameter dan dokumen portal (dibangun sekali, saat pencarian pertama).
 var VOCAB=null;
 function vocab(){
@@ -670,15 +706,32 @@ function vocab(){
 // Skor kecocokan: kata utuh = panjang kata. Kata ≥4 huruf boleh cocok sebagian (mis. "cair" → "pencairan"),
 // tapi hanya kalau kata itu tidak ada sebagai kata utuh di portal — jadi "over" (dari "Turn Over") tidak
 // ikut mencocokkan "tercover". Token pendek seperti "ao" hanya cocok sebagai kata utuh.
-// Kalau semua kata kunci muncul berurutan, skor ×2.
-function kwScore(kws,text){
-  var tt=toks(text),s=0,v=vocab();
+// Sinonim (SYN) dihitung sebagai kata utuh dengan bobotnya. Kalau semua kata kunci muncul berurutan, skor ×2.
+// Terakhir dikali 0,75–1 sesuai porsi kata di `text` (nama) yang tercakup, supaya saat skor seri
+// "Total AO Mekaar" (2 dari 3 kata) menang dari "Jml AO Masa Kerja ≥ 1 Bulan" (2 dari 6 kata).
+// `extra` (bagian, deskripsi) ikut dicocokkan tapi tidak dihitung dalam porsi itu.
+function kwScore(kws,text,extra){
+  var nt=toks(text).length,tt=toks(text+' '+(extra||'')),s=0,v=vocab(),used={},hit=[];
   kws.forEach(function(k){
-    if(tt.indexOf(k)>=0)s+=k.length;
-    else if(k.length>=4&&!v[k]&&tt.some(function(t){return t.indexOf(k)>=0}))s+=k.length-1;
+    var a=alts(k),best=0,at=-1;
+    tt.forEach(function(t,i){if(a[t]&&a[t]>best){best=a[t];at=i;}});
+    if(best){s+=k.length*best;used[at]=1;hit.push(k);}
+    else if(k.length>=4&&!v[k]){
+      tt.forEach(function(t,i){if(at<0&&t.indexOf(k)>=0)at=i;});
+      if(at>=0){s+=k.length-1;used[at]=1;}
+    }
   });
-  if(s&&kws.length>1&&(' '+tt.join(' ')+' ').indexOf(' '+kws.join(' ')+' ')>=0)s*=2;
-  return s;
+  if(!s)return 0;
+  // bonus frasa: SEMUA kata kunci cocok utuh dan muncul berurutan. Angka yang tidak cocok
+  // (mis. "6" di "tren 6 bulan") diabaikan; kata lain yang tidak cocok membatalkan bonus.
+  var need=kws.filter(function(k){return !/^\d+$/.test(k)||hit.indexOf(k)>=0});
+  if(hit.length>1&&hit.length===need.length){
+    for(var i=0;i+hit.length<=tt.length;i++){
+      if(hit.every(function(k,j){return alts(k)[tt[i+j]]})){s*=2;break;}
+    }
+  }
+  var cov=Object.keys(used).filter(function(i){return i<nt}).length/Math.max(nt,1);
+  return s*(0.75+0.25*cov);
 }
 function tblR(rows,p,title){var ht='<span style="font-size:12.5px">'+title+'</span><table><tr><th>Parameter</th><th>Jenis</th><th>Nilai ('+p+')</th></tr>';rows.forEach(function(r){var v=r[p];ht+='<tr><td>'+esc(r.par)+'</td><td>'+esc(r.jen)+'</td><td class="num">'+(v?stDot(r,p)+esc(v):'<span class="dna">belum tersedia</span>')+'</td></tr>'});return ht+'</table>';}
 function userMsg(txt){var t=now(),el=document.createElement('div');el.className='msg u';el.innerHTML='<div><div class="mbub">'+esc(txt)+'</div><div class="mtime">'+t+'</div></div><div class="mav">U</div>';document.getElementById('cmsgs').appendChild(el);el.scrollIntoView({behavior:'smooth'});}
