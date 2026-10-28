@@ -597,6 +597,7 @@ function ask(q){
   document.getElementById('sugs').style.display='none';
   setTimeout(function(){botMsg(query(q))},300);
 }
+var LAST=null; // hasil pencocokan parameter dari pertanyaan sebelumnya, untuk pertanyaan lanjutan
 function query(q){
   var ql=q.toLowerCase(),lp=DB.periods[DB.periods.length-1],pp=DB.periods.length>=2?DB.periods[DB.periods.length-2]:null;
   var ep=parsePeriod(ql);
@@ -609,8 +610,27 @@ function query(q){
     return tblR(jr,ep||lp,'Semua indikator <b>'+jt+'</b> — '+jr.length+' parameter — periode <b>'+(ep||lp)+'</b>:');
   }
   var kws=kwds(ql);
-  var scored=DB.rows.map(function(r){return{r:r,s:kwScore(kws,r.par,r.bag)}}).filter(function(x){return x.s>0}).sort(function(a,b){return b.s-a.s});
+  var scored=DB.rows.map(function(r){
+    var s=kwScore(kws,r.par,r.bag);
+    // Parameter rasio "A/B": kalau yang ditanya cuma A (mis. "berapa NOC"), yang dimaksud jumlah A, bukan rasio A/B.
+    // Kalau ditanya "A per B" / "A/B", rasio itulah yang dimaksud (mis. "jumlah kelompok per AO").
+    var m=r.par.match(/([a-z]+)\s*\/\s*([a-z]+)/i);
+    if(s&&m){
+      var qa=kws.some(function(k){return alts(k)[m[1].toLowerCase()]}),qb=kws.some(function(k){return alts(k)[m[2].toLowerCase()]});
+      if(qa&&!qb)s*=0.6;
+      else if(qa&&qb&&/\bper\b|\//.test(ql))s*=3;
+    }
+    return{r:r,s:s};
+  }).filter(function(x){return x.s>0}).sort(function(a,b){return b.s-a.s});
   var docMatches=scoreDocs(kws);
+  // Pertanyaan lanjutan ("gimana kalo bulan lalu?", "trennya?"): tidak menyebut parameter tapi menyebut
+  // periode/tren/kata rujukan → pakai parameter dari pertanyaan sebelumnya.
+  var ctx='';
+  if(!scored.length&&LAST&&(ep||wT||nM||/terakhir|terbaru|sekarang|saat ini|lalu|kemarin|sebelumnya|itu|tadi|gimana|bagaimana|kalo|kalau/.test(ql))){
+    scored=LAST;docMatches=[];
+    ctx='<span style="font-size:11px;color:var(--text3)">Melanjutkan pertanyaan sebelumnya</span><br>';
+  }
+  if(scored.length)LAST=scored;
   if(!scored.length){
     if(docMatches.length)return docCardsHtml(docMatches,'Tidak ada parameter yang cocok, tapi ditemukan <b>'+docMatches.length+' dokumen</b> terkait <b>"'+esc(q)+'"</b>:');
     return'Maaf, tidak ditemukan parameter atau dokumen yang cocok dengan <b>"'+esc(q)+'"</b>.<br><br>Coba kata kunci yang ada di nama parameter atau dokumen, atau buka tab <b>Datamart</b> / <b>Laporan &amp; Dokumen</b>.';
@@ -625,9 +645,9 @@ function query(q){
       ps.forEach(function(p){ht+='<tr><td>'+p+'</td><td class="num">'+(ro[p]?stDot(ro,p)+esc(ro[p]):'<span class="dna">belum tersedia</span>')+'</td></tr>'});
       ht+='</table>';
       if(others.length)ht+='<br><span style="font-size:11.5px;color:var(--text3)">Terkait: '+others.map(function(o){return'<i>'+esc(o.par)+'</i>'}).join(', ')+'</span>';
-      return ht+docSuffix;
+      return ctx+ht+docSuffix;
     }
-    return tblR(rws,tgtP,rws.length+' parameter cocok:')+docSuffix;
+    return ctx+tblR(rws,tgtP,rws.length+' parameter cocok:')+docSuffix;
   }
   if(scored.length===1||scored[0].s>scored[1].s*1.4){
     var val=top[tgtP],ht2='<b>'+esc(top.par)+'</b>'+(top.bag?' <span style="font-size:11px;color:var(--text3)">('+esc(top.bag)+')</span>':'')+'<br>';
@@ -638,9 +658,9 @@ function query(q){
     var ci=DB.periods.indexOf(tgtP),cp=ci>0?DB.periods[ci-1]:null;
     if(cp){var pval=top[cp];if(pval&&val){ht2+='<div class="mvsub">Sebelumnya ('+cp+'): <b>'+esc(pval)+'</b> &nbsp;'+trendHtml(top,tgtP,cp)+'</div>';}}
     if(others.length)ht2+='<br><span style="font-size:11.5px;color:var(--text3)">Terkait: '+others.map(function(o){return'<i>'+esc(o.par)+'</i>'}).join(', ')+'</span>';
-    return ht2+docSuffix;
+    return ctx+ht2+docSuffix;
   }
-  return tblR(scored.slice(0,6).map(function(x){return x.r}),tgtP,'<b>'+scored.length+'</b> parameter cocok — 6 teratas (periode <b>'+tgtP+'</b>):')+docSuffix;
+  return ctx+tblR(scored.slice(0,6).map(function(x){return x.r}),tgtP,'<b>'+scored.length+'</b> parameter cocok — 6 teratas (periode <b>'+tgtP+'</b>):')+docSuffix;
 }
 function scoreDocs(kws){
   if(!kws.length)return[];
@@ -671,6 +691,7 @@ var MONTHS={jan:1,januari:1,january:1,feb:2,februari:2,february:2,mar:3,maret:3,
 // (= Mei terakhir yang ada di data). null kalau tidak menyebut periode.
 function parsePeriod(ql){
   var m=ql.match(/\b(20\d{2})(0[1-9]|1[0-2])\b/);if(m)return m[1]+m[2];
+  if(/bulan\s+(lalu|kemarin|sebelumnya)|periode\s+sebelumnya/.test(ql))return DB.periods[DB.periods.length-2]||null;
   m=ql.match(/\b(0?[1-9]|1[0-2])[\/\-.](20\d{2})\b/);if(m)return m[2]+('0'+m[1]).slice(-2);
   m=ql.match(/\b(20\d{2})[\/\-.](0?[1-9]|1[0-2])\b/);if(m)return m[1]+('0'+m[2]).slice(-2);
   var tt=toks(ql);
@@ -685,7 +706,7 @@ function parsePeriod(ql){
   return null;
 }
 function kwds(ql){
-  var stops=['berapa','berapakah','brp','nilai','data','angka','bulan','bln','tahun','thn','ini','terakhir','terbaru','sekarang','periode','tampilkan','lihat','cari','dong','nih','sih','ya','kah','tren','trend','dari','yang','untuk','pada','di','ke','dan','atau','dengan','nya','ada','apa','apakah','gimana','bagaimana','tolong','mohon','minta','info','saja','aja','per','sampai','hingga','mau','tau','tahu','cuy','bro','gan','kak'];
+  var stops=['berapa','berapakah','brp','nilai','data','angka','bulan','bln','tahun','thn','ini','terakhir','terbaru','sekarang','periode','tampilkan','lihat','cari','dong','nih','sih','ya','kah','tren','trend','dari','yang','untuk','pada','di','ke','dan','atau','dengan','nya','ada','apa','apakah','gimana','bagaimana','tolong','mohon','minta','info','saja','aja','per','sampai','hingga','mau','tau','tahu','cuy','bro','gan','kak','kalo','kalau','klo','gmn','gitu','itu','tadi','yg','utk','dgn','pnm','lalu','kemarin','sebelumnya'];
   // nama bulan, tahun, dan periode sudah ditangani parsePeriod(), jangan ikut jadi kata kunci
   return toks(ql).filter(function(w){return (w.length>1||/^\d$/.test(w))&&!stops.includes(w)&&!MONTHS[w]&&!/^20\d{2}(\d{2})?$/.test(w)});
 }
