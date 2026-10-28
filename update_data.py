@@ -44,10 +44,11 @@ RE_URL = re.compile(r"^https?://", re.IGNORECASE)
 
 # Arah "baik" tiap indikator Hasil, dikonfirmasi pemilik portal 27 Okt 2026.
 # Dipakai HANYA kalau sheet DATAMART belum punya kolom "Arah" atau selnya kosong.
-# naik  = nilai naik itu membaik (hijau ▲), turun = nilai turun itu membaik (hijau ▼).
+# naik  = nilai naik itu membaik (hijau ▲), turun = nilai turun itu membaik (hijau ▼),
+# target = mendekati pita hijau tua di sheet THRESHOLD itu membaik (ambang dua sisi).
 ARAH_DEFAULT = {
-    "OPS-00000001": "turun",  # NOC/AO ≥ 1 Bulan
-    "OPS-00000004": "turun",  # Kelompok/AO ≥ 1 Bulan
+    "OPS-00000001": "target", # NOC/AO ≥ 1 Bulan
+    "OPS-00000004": "target", # Kelompok/AO ≥ 1 Bulan
     "OPS-00000007": "turun",  # Turn Over AO Mekaar 12 Bulan Terakhir
     "OPS-00000010": "turun",  # AO Mekaar Masa Kerja ≤ 3 Bulan
     "OPS-00000013": "naik",   # PKM Full Payment
@@ -60,7 +61,142 @@ ARAH_DEFAULT = {
     "OPS-00000030": "turun",  # % Total Klaim CIS CIT
     "OPS-00000034": "turun",  # % Pencairan diluar hari PKM
 }
-ARAH_VALID = ("naik", "turun", "netral")
+ARAH_VALID = ("naik", "turun", "target", "netral")
+
+# Ambang status (RAG) per indikator Hasil, dari dashboard KRI yang diberikan pemilik portal 28 Okt 2026.
+# Dipakai HANYA kalau sheet THRESHOLD belum ada atau tidak punya baris untuk Primary Key tersebut.
+# Notasi sama dengan dashboard: "x ≤ 10%", "300 < x ≤ 340", "60% ≥ x > 50%", "x = 0%".
+# Beberapa rentang untuk satu warna dipisah titik koma (ambang dua sisi).
+LEVELS = ("hijau_tua", "hijau", "kuning", "oranye", "merah")
+LEVEL_HEADERS = {"hijau tua": "hijau_tua", "hijau": "hijau", "kuning": "kuning", "oranye": "oranye", "merah": "merah"}
+_TURN_OVER = {"hijau_tua": "x ≤ 10%", "hijau": "10% < x ≤ 20%", "kuning": "20% < x ≤ 35%",
+              "oranye": "35% < x ≤ 50%", "merah": "x > 50%"}
+_HADIR_PKM = {"hijau_tua": "x > 60%", "hijau": "60% ≥ x > 50%", "kuning": "50% ≥ x > 40%",
+              "oranye": "40% ≥ x > 30%", "merah": "x ≤ 30%"}
+THRESHOLD_DEFAULT = {
+    "OPS-00000001": {"hijau_tua": "340 < x ≤ 380", "kuning": "300 < x ≤ 340; 380 < x ≤ 420",
+                     "merah": "x ≤ 300; x > 420"},
+    "OPS-00000004": {"hijau_tua": "17 ≤ x ≤ 23", "kuning": "12 < x < 17; 23 < x ≤ 28",
+                     "merah": "x ≤ 12; x > 28"},
+    "OPS-00000007": _TURN_OVER,
+    "OPS-00000010": _TURN_OVER,
+    "OPS-00000013": _HADIR_PKM,
+    "OPS-00000014": _HADIR_PKM,
+    "OPS-00000021": {"hijau_tua": "x = 0%", "hijau": "0% < x ≤ 3%", "kuning": "3% < x ≤ 6%",
+                     "oranye": "6% < x ≤ 9%", "merah": "x > 9%"},
+    "OPS-00000024": {"hijau_tua": "x = 100%", "kuning": "100% > x ≥ 70%", "merah": "x < 70%"},
+    # = "% Belum TLHP (Mekaar)" di dashboard
+    "OPS-00000027": {"hijau_tua": "x = 0%", "hijau": "0% < x ≤ 5%", "kuning": "5% < x ≤ 8%",
+                     "oranye": "8% < x ≤ 10%", "merah": "x > 10%"},
+}
+
+_NUM = r"-?\d+(?:[.,]\d+)?%?"
+_OP = r"<=|>=|≤|≥|<|>|="
+RE_COND_RANGE = re.compile(rf"^({_NUM})\s*({_OP})\s*x\s*({_OP})\s*({_NUM})$")
+RE_COND_X_LEFT = re.compile(rf"^x\s*({_OP})\s*({_NUM})$")
+RE_COND_X_RIGHT = re.compile(rf"^({_NUM})\s*({_OP})\s*x$")
+_FLIP = {"<": ">", ">": "<", "≤": "≥", "≥": "≤", "=": "="}
+EPS = 1e-9  # toleransi float, mis. 0.03 dari formula vs ambang 3%
+
+
+def _norm_op(op):
+    return {"<=": "≤", ">=": "≥"}.get(op, op)
+
+
+def _bound(op, num):
+    """Interval untuk "x <op> num"."""
+    if op == "<":
+        return {"lo": None, "loInc": False, "hi": num, "hiInc": False}
+    if op == "≤":
+        return {"lo": None, "loInc": False, "hi": num, "hiInc": True}
+    if op == ">":
+        return {"lo": num, "loInc": False, "hi": None, "hiInc": False}
+    if op == "≥":
+        return {"lo": num, "loInc": True, "hi": None, "hiInc": False}
+    return {"lo": num, "loInc": True, "hi": num, "hiInc": True}
+
+
+def parse_condition(text):
+    """
+    "300 < x ≤ 340" → ({"lo":300,"loInc":False,"hi":340,"hiInc":True}, False, label).
+    Angka ber-% dibagi 100 supaya sebanding dengan nilai pecahan di DATAMART.
+    Mengembalikan None kalau notasi tidak dikenali.
+    """
+    label = text.strip().replace("X", "x").replace("<=", "≤").replace(">=", "≥")
+    label = re.sub(r"\s+", " ", re.sub(r"\s*([≤≥<>=])\s*", r" \1 ", label)).strip()
+    s = label.replace(" ", "")
+
+    def num(tok):
+        v = float(tok.rstrip("%").replace(",", "."))
+        return (v / 100, True) if tok.endswith("%") else (v, False)
+
+    m = RE_COND_RANGE.match(s)
+    if m:
+        (a, pa), (b, pb) = num(m.group(1)), num(m.group(4))
+        left = _bound(_FLIP[_norm_op(m.group(2))], a)   # "a < x" ≡ "x > a"
+        right = _bound(_norm_op(m.group(3)), b)
+        iv = {"lo": left["lo"] if left["lo"] is not None else right["lo"],
+              "loInc": left["loInc"] if left["lo"] is not None else right["loInc"],
+              "hi": right["hi"] if right["hi"] is not None else left["hi"],
+              "hiInc": right["hiInc"] if right["hi"] is not None else left["hiInc"]}
+        return iv, pa or pb, label
+    m = RE_COND_X_LEFT.match(s)
+    if m:
+        a, pa = num(m.group(2))
+        return _bound(_norm_op(m.group(1)), a), pa, label
+    m = RE_COND_X_RIGHT.match(s)
+    if m:
+        a, pa = num(m.group(1))
+        return _bound(_FLIP[_norm_op(m.group(2))], a), pa, label
+    return None
+
+
+def in_interval(v, iv):
+    if iv["lo"] is not None and (v < iv["lo"] - EPS if iv["loInc"] else v <= iv["lo"] + EPS):
+        return False
+    if iv["hi"] is not None and (v > iv["hi"] + EPS if iv["hiInc"] else v >= iv["hi"] - EPS):
+        return False
+    return True
+
+
+def parse_bands(spec, sat, row_label):
+    """spec: {level: "kondisi; kondisi"} → list pita {lvl, label, lo, loInc, hi, hiInc}."""
+    bands = []
+    for lvl in LEVELS:
+        for part in str(spec.get(lvl) or "").split(";"):
+            if not part.strip():
+                continue
+            parsed = parse_condition(part)
+            if not parsed:
+                warn(f"'{row_label}': ambang {lvl.replace('_', ' ')} \"{part.strip()}\" tidak dikenali — "
+                     f"pakai notasi seperti \"x ≤ 10%\" atau \"300 < x ≤ 340\".")
+                continue
+            iv, has_pct, label = parsed
+            if has_pct != (sat == "%"):
+                warn(f"'{row_label}': ambang \"{label}\" {'pakai' if has_pct else 'tanpa'} tanda %, "
+                     f"padahal satuan indikator ini {sat}.")
+            bands.append({"lvl": lvl, "label": label, **iv})
+    return bands
+
+
+def classify(v, bands):
+    """Level pita yang memuat nilai v. Mengembalikan (level|None, daftar level yang cocok)."""
+    hits = [b["lvl"] for b in bands if in_interval(v, b)]
+    return (hits[0] if hits else None), hits
+
+
+def target_band(bands):
+    """Gabungan rentang level terbaik (biasanya hijau tua) — acuan arah 'target'."""
+    best = [b for b in bands if b["lvl"] == bands[0]["lvl"]]
+    los = [b["lo"] for b in best]
+    his = [b["hi"] for b in best]
+    return {"lo": None if None in los else min(los), "hi": None if None in his else max(his)}
+
+
+def legend_order(bands, arah):
+    """Urutan chip legenda mengikuti nilai: naik dari kecil, 'naik = baik' dibalik (terbaik di kiri)."""
+    key = lambda b: (float("-inf") if b["lo"] is None else b["lo"], 0 if b["loInc"] else 1)
+    return sorted(bands, key=key, reverse=(arah == "naik"))
 
 
 def looks_like_unformatted_percent(s):
@@ -185,7 +321,33 @@ def check_value_format(val_str, row_label, period):
     # Selain itu dianggap teks kualitatif yang sah, tidak di-warn.
 
 
-def read_datamart(wb):
+def read_thresholds(wb):
+    """
+    Sheet THRESHOLD (opsional): header "Primary Key", "Hijau Tua", "Hijau", "Kuning", "Oranye", "Merah"
+    di salah satu dari 5 baris pertama; satu baris per indikator. Sel kosong = warna itu tidak dipakai.
+    """
+    if "THRESHOLD" not in wb.sheetnames:
+        return {}
+    ws = wb["THRESHOLD"]
+    for hr in range(1, 6):
+        heads = {str(ws.cell(row=hr, column=c).value or "").strip().lower(): c
+                 for c in range(1, ws.max_column + 1)}
+        if "primary key" in heads:
+            break
+    else:
+        warn("Sheet THRESHOLD ada tapi header 'Primary Key' tidak ditemukan di 5 baris pertama — sheet diabaikan.")
+        return {}
+    level_cols = {LEVEL_HEADERS[h]: c for h, c in heads.items() if h in LEVEL_HEADERS}
+    out = {}
+    for er in range(hr + 1, ws.max_row + 1):
+        key = str(ws.cell(row=er, column=heads["primary key"]).value or "").strip()
+        if key:
+            out[key] = {lvl: str(ws.cell(row=er, column=c).value or "").strip() for lvl, c in level_cols.items()}
+    print(f"  THRESHOLD: {len(out)} indikator dari sheet THRESHOLD")
+    return out
+
+
+def read_datamart(wb, thr_xl):
     if "DATAMART" not in wb.sheetnames:
         print("ERROR: Sheet 'DATAMART' tidak ditemukan di file Excel.")
         sys.exit(1)
@@ -229,10 +391,10 @@ def read_datamart(wb):
         if jen == "Hasil":
             arah_xl = str(ws.cell(row=er, column=arah_col).value or "").strip().lower() if arah_col else ""
             if arah_xl and arah_xl not in ARAH_VALID:
-                warn(f"Baris {er} ('{par_clean}'): kolom ARAH berisi '{arah_xl}', diharapkan Naik, Turun, atau Netral.")
+                warn(f"Baris {er} ('{par_clean}'): kolom ARAH berisi '{arah_xl}', diharapkan Naik, Turun, Target, atau Netral.")
             arah = arah_xl if arah_xl in ARAH_VALID else ARAH_DEFAULT.get(key, "")
             if not arah:
-                warn(f"Baris {er} ('{par_clean}'): indikator Hasil tanpa ARAH — isi kolom Arah dengan Naik, Turun, atau Netral.")
+                warn(f"Baris {er} ('{par_clean}'): indikator Hasil tanpa ARAH — isi kolom Arah dengan Naik, Turun, Target, atau Netral.")
                 arah = "netral"
 
         src, url = read_source(ws.cell(row=er, column=5))
@@ -268,6 +430,26 @@ def read_datamart(wb):
                 continue
             row[p], nums[p] = format_display(num, sat), num
         row["num"] = nums
+
+        spec = (thr_xl.get(key) or THRESHOLD_DEFAULT.get(key)) if jen == "Hasil" else None
+        bands = parse_bands(spec, sat, par_clean) if spec else []
+        if row["arah"] == "target" and not bands:
+            warn(f"Baris {er} ('{par_clean}'): ARAH Target butuh ambang di sheet THRESHOLD — sementara dianggap Netral.")
+            row["arah"] = "netral"
+        if bands:
+            row["thr"] = legend_order(bands, row["arah"])
+            row["tgt"] = target_band(bands)
+            row["st"] = {}
+            for p in periods:
+                if nums[p] is None:
+                    row["st"][p] = None
+                    continue
+                lvl, hits = classify(nums[p], bands)
+                if not hits:
+                    warn(f"'{par_clean}' periode {p}: nilai {row[p]} tidak masuk pita ambang mana pun — cek celah di ambang.")
+                elif len(set(hits)) > 1:
+                    warn(f"'{par_clean}' periode {p}: nilai {row[p]} masuk lebih dari satu warna ({', '.join(hits)}) — ambang tumpang tindih.")
+                row["st"][p] = lvl
         rows.append(row)
 
     print(f"  DATAMART : {len(rows)} parameter, {len(periods)} periode")
@@ -318,7 +500,7 @@ def main():
 
     print(f"Membaca {EXCEL_FILE.name}...")
     wb = load_workbook(EXCEL_FILE, data_only=True)
-    dm      = read_datamart(wb)
+    dm      = read_datamart(wb, read_thresholds(wb))
     laporan = read_laporan(wb)
     ts      = datetime.now().strftime("%Y-%m-%d %H:%M")
 

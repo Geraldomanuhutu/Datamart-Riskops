@@ -133,6 +133,25 @@ tr.hr td.td-p{color:var(--acc2);font-weight:600}
 .sc-lbl{font-size:11.5px;color:var(--text2);margin-bottom:8px;line-height:1.4}
 .sc-val{font-size:23px;font-weight:700;font-family:var(--mono);color:var(--text);line-height:1}
 .sc-sub{font-size:11px;color:var(--text3);margin-top:5px;display:flex;align-items:center;gap:5px}
+/* STATUS KRI (ambang dari sheet THRESHOLD / THRESHOLD_DEFAULT) */
+.st-hijau_tua{background:#1f5f22;color:#fff}
+.st-hijau{background:#3fa535;color:#0f2a0c}
+.st-kuning{background:#fcd75b;color:#3d3000}
+.st-oranye{background:#fb9a4c;color:#3d1a00}
+.st-merah{background:#ec3a3a;color:#fff}
+.st-none{background:var(--bg2);color:var(--text3)}
+.scards.kri{grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr))}
+.sc.kri{padding:0;overflow:hidden;display:flex;flex-direction:column}
+.sc.kri .sc-lbl{padding:12px 14px 0;font-weight:600;color:var(--text);min-height:42px}
+.kri-val{margin:8px 14px 0;border-radius:var(--r);padding:12px 10px;text-align:center;font-family:var(--mono);font-size:26px;font-weight:700;line-height:1}
+.kri-val .dna{font-size:13px}
+.sc.kri .sc-sub{padding:0 14px;justify-content:center}
+.kri-leg{display:flex;flex-wrap:wrap;gap:3px;padding:8px 14px 12px;margin-top:auto}
+.kchip{flex:1 1 auto;text-align:center;font-size:9.5px;font-weight:600;padding:2px 4px;border-radius:4px;white-space:nowrap;opacity:.55}
+.kchip.on{opacity:1;outline:2px solid var(--text);outline-offset:1px}
+.kri-none{font-size:10.5px;color:var(--text3);text-align:center;width:100%}
+.sdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;border:1px solid rgba(0,0,0,.15)}
+.kpill{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:10px;margin-left:6px;vertical-align:middle}
 .tbad{color:var(--red);font-size:11px}
 .tgood{color:var(--green);font-size:11px}
 .tneu{color:var(--text3);font-size:11px}
@@ -421,12 +440,33 @@ function showView(id,btn){
 function renderCards(){
   var lp=DB.periods[DB.periods.length-1];
   var pp=DB.periods.length>=2?DB.periods[DB.periods.length-2]:null;
-  var hasil=DB.rows.filter(function(r){return r.jen==='Hasil'}).slice(0,4);
-  document.getElementById('scards').innerHTML=hasil.map(function(r){
-    var v=r[lp],trend=pp?trendHtml(r,lp,pp):'';
-    return'<div class="sc"><div class="sc-lbl">'+esc(r.par)+'</div><div class="sc-val">'+(v?v:'<span class="dna" style="font-size:13px">belum tersedia</span>')+'</div><div class="sc-sub">'+lp+' '+trend+'</div></div>';
+  var hasil=DB.rows.filter(function(r){return r.jen==='Hasil'});
+  var el=document.getElementById('scards');
+  el.classList.add('kri');
+  el.innerHTML=hasil.map(function(r){
+    var v=r[lp],trend=pp?trendHtml(r,lp,pp):'',st=stOf(r,lp),n=numOf(r,lp);
+    var leg=r.thr&&r.thr.length
+      ?r.thr.map(function(b){var on=n!==null&&inBand(n,b);return'<span class="kchip st-'+b.lvl+(on?' on':'')+'">'+esc(b.label)+'</span>';}).join('')
+      :'<span class="kri-none">Belum ada ambang</span>';
+    return'<div class="sc kri"><div class="sc-lbl">'+esc(r.par)+'</div>'
+      +'<div class="kri-val st-'+(st||'none')+'" title="'+(st?'Status: '+ST_LABEL[st]:'Tanpa status')+'">'+(v?esc(v):'<span class="dna">belum tersedia</span>')+'</div>'
+      +'<div class="sc-sub">'+lp+' '+trend+'</div>'
+      +'<div class="kri-leg">'+leg+'</div></div>';
   }).join('');
 }
+
+// ── STATUS KRI ───────────────────────────────────────────────
+var ST_LABEL={hijau_tua:'Hijau Tua',hijau:'Hijau',kuning:'Kuning',oranye:'Oranye',merah:'Merah'};
+function stOf(r,p){return r.st&&r.st[p]||null;}
+// Sama dengan in_interval() di update_data.py, dipakai untuk menandai chip pita yang aktif.
+function inBand(v,b){
+  var e=1e-9;
+  if(b.lo!==null&&(b.loInc?v<b.lo-e:v<=b.lo+e))return false;
+  if(b.hi!==null&&(b.hiInc?v>b.hi+e:v>=b.hi-e))return false;
+  return true;
+}
+function stDot(r,p){var st=stOf(r,p);return st?'<span class="sdot st-'+st+'" title="Status: '+ST_LABEL[st]+'"></span>':'';}
+function stPill(r,p){var st=stOf(r,p);return st?'<span class="kpill st-'+st+'">'+ST_LABEL[st]+'</span>':'';}
 
 // ── TREN ─────────────────────────────────────────────────────
 // Nilai numerik presisi penuh dari data.js (r.num). Fallback parseFloat untuk data.js lama.
@@ -435,7 +475,9 @@ function numOf(r,p){
   var n=parseFloat(r[p]);return isNaN(n)?null:n;
 }
 function fmtId(n,dec){return n.toLocaleString('id-ID',{minimumFractionDigits:dec,maximumFractionDigits:dec});}
-// Hijau = membaik, merah = memburuk, abu-abu = arah tidak ditentukan (Pembentuk / Netral).
+// Jarak ke pita target (0 kalau di dalam pita) — untuk arah 'target' (ambang dua sisi).
+function distTgt(x,t){if(t.lo!==null&&x<t.lo)return t.lo-x;if(t.hi!==null&&x>t.hi)return x-t.hi;return 0;}
+// Hijau = membaik, merah = memburuk, abu-abu = arah tidak ditentukan (Pembentuk / Netral / tetap di pita target).
 // Satuan % ditampilkan sebagai selisih poin persen (pp), selain itu perubahan relatif.
 function trendHtml(r,p,pp){
   var v=numOf(r,p),pv=numOf(r,pp);
@@ -443,9 +485,12 @@ function trendHtml(r,p,pp){
   var d=v-pv;
   if(d===0)return'<span class="tneu">= tetap</span>';
   var txt=r.sat==='%'?fmtId(Math.abs(d)*100,2)+' pp':pv!==0?fmtId(Math.abs(d/pv*100),1)+'%':'';
-  var good=r.arah==='naik'?d>0:r.arah==='turun'?d<0:null;
+  var good=null;
+  if(r.arah==='naik')good=d>0;
+  else if(r.arah==='turun')good=d<0;
+  else if(r.arah==='target'&&r.tgt){var dv=distTgt(v,r.tgt),dp=distTgt(pv,r.tgt);good=dv<dp?true:dv>dp?false:null;}
   var cls=good===null?'tneu':good?'tgood':'tbad';
-  var tip=r.arah==='naik'?'Naik = baik':r.arah==='turun'?'Turun = baik':'Arah baik tidak ditentukan';
+  var tip=r.arah==='naik'?'Naik = baik':r.arah==='turun'?'Turun = baik':r.arah==='target'?'Mendekati target = baik':'Arah baik tidak ditentukan';
   return'<span class="'+cls+'" title="'+tip+'">'+(d>0?'▲':'▼')+' '+txt+'</span>';
 }
 
@@ -469,7 +514,7 @@ function renderTbl(){
   document.getElementById('tbody').innerHTML=filtered.map(function(r){
     var isH=r.jen==='Hasil';
     var badge=isH?'<span class="bh">Hasil</span>':'<span class="bp">Pembentuk</span>';
-    var cells=showP.map(function(p){var v=r[p],isL=p===lp&&!pf;return'<td class="'+(isL?'td-nl':'td-n')+'">'+(v||'<span class="dna">belum tersedia</span>')+'</td>';}).join('');
+    var cells=showP.map(function(p){var v=r[p],isL=p===lp&&!pf;return'<td class="'+(isL?'td-nl':'td-n')+'">'+(v?stDot(r,p)+esc(v):'<span class="dna">belum tersedia</span>')+'</td>';}).join('');
     var src=srcHtml(r);
     return'<tr class="'+(isH?'hr':'')+'"><td class="td-k">'+esc(r.key)+'</td><td class="td-p">'+esc(r.par)+'</td><td>'+badge+'</td>'+cells+'<td>'+src+'</td></tr>';
   }).join('');
@@ -576,7 +621,7 @@ function query(q){
     var rws=scored.slice(0,(scored.length>1&&scored[0].s===scored[1].s)?3:1).map(function(x){return x.r});
     if(rws.length===1){
       var ro=rws[0],ht='<b>'+esc(ro.par)+'</b> — tren <b>'+n+' periode terakhir</b>:<table><tr><th>Periode</th><th>Nilai</th></tr>';
-      ps.forEach(function(p){ht+='<tr><td>'+p+'</td><td class="num">'+(ro[p]||'<span class="dna">belum tersedia</span>')+'</td></tr>'});
+      ps.forEach(function(p){ht+='<tr><td>'+p+'</td><td class="num">'+(ro[p]?stDot(ro,p)+esc(ro[p]):'<span class="dna">belum tersedia</span>')+'</td></tr>'});
       ht+='</table>';
       if(others.length)ht+='<br><span style="font-size:11.5px;color:var(--text3)">Terkait: '+others.map(function(o){return'<i>'+esc(o.par)+'</i>'}).join(', ')+'</span>';
       return ht+docSuffix;
@@ -585,7 +630,7 @@ function query(q){
   }
   if(scored.length===1||scored[0].s>scored[1].s*1.4){
     var val=top[tgtP],ht2='<b>'+esc(top.par)+'</b>'+(top.bag?' <span style="font-size:11px;color:var(--text3)">('+esc(top.bag)+')</span>':'')+'<br>';
-    if(val){ht2+='<span class="vhl">'+val+'</span> <span style="font-size:11px;color:var(--text3)">per '+tgtP+'</span>'}
+    if(val){ht2+='<span class="vhl">'+esc(val)+'</span>'+stPill(top,tgtP)+' <span style="font-size:11px;color:var(--text3)">per '+tgtP+'</span>'}
     else{ht2+='<span class="dna">Data belum tersedia untuk periode '+tgtP+'</span>'}
     if(pp&&!ep){var pval=top[pp];if(pval&&val){ht2+='<div class="mvsub">Sebelumnya ('+pp+'): <b>'+pval+'</b> &nbsp;'+trendHtml(top,tgtP,pp)+'</div>';}}
     if(others.length)ht2+='<br><span style="font-size:11.5px;color:var(--text3)">Terkait: '+others.map(function(o){return'<i>'+esc(o.par)+'</i>'}).join(', ')+'</span>';
@@ -624,7 +669,7 @@ function kwScore(kws,text){
   if(s&&kws.length>1&&(' '+tt.join(' ')+' ').indexOf(' '+kws.join(' ')+' ')>=0)s*=2;
   return s;
 }
-function tblR(rows,p,title){var ht='<span style="font-size:12.5px">'+title+'</span><table><tr><th>Parameter</th><th>Jenis</th><th>Nilai ('+p+')</th></tr>';rows.forEach(function(r){var v=r[p];ht+='<tr><td>'+esc(r.par)+'</td><td>'+esc(r.jen)+'</td><td class="num">'+(v||'<span class="dna">belum tersedia</span>')+'</td></tr>'});return ht+'</table>';}
+function tblR(rows,p,title){var ht='<span style="font-size:12.5px">'+title+'</span><table><tr><th>Parameter</th><th>Jenis</th><th>Nilai ('+p+')</th></tr>';rows.forEach(function(r){var v=r[p];ht+='<tr><td>'+esc(r.par)+'</td><td>'+esc(r.jen)+'</td><td class="num">'+(v?stDot(r,p)+esc(v):'<span class="dna">belum tersedia</span>')+'</td></tr>'});return ht+'</table>';}
 function userMsg(txt){var t=now(),el=document.createElement('div');el.className='msg u';el.innerHTML='<div><div class="mbub">'+esc(txt)+'</div><div class="mtime">'+t+'</div></div><div class="mav">U</div>';document.getElementById('cmsgs').appendChild(el);el.scrollIntoView({behavior:'smooth'});}
 function botMsg(html){var t=now(),el=document.createElement('div');el.className='msg b';el.innerHTML='<div class="mav">🔍</div><div><div class="mbub">'+html+'</div><div class="mtime">'+t+'</div></div>';document.getElementById('cmsgs').appendChild(el);el.scrollIntoView({behavior:'smooth'});}
 function now(){return new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});}

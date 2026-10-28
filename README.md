@@ -73,6 +73,28 @@ python update_data.py --strict   # mode sama seperti yang dipakai GitHub Actions
 
 ---
 
+## 🚦 Arah & Ambang Status (opsional)
+
+Warna status (hijau tua → merah) dan warna panah tren di portal diatur dari dua tempat di Excel.
+Kalau belum diisi, portal memakai daftar bawaan di `update_data.py`.
+
+**Kolom `Arah` di sheet DATAMART** — sisipkan satu kolom sebelum kolom periode, judul `Arah`, isi untuk baris Hasil:
+- `Naik` = makin tinggi makin baik · `Turun` = makin rendah makin baik
+- `Target` = ada pita target di tengah (mis. NOC/AO) · `Netral` = tanpa warna
+
+**Sheet `THRESHOLD`** — judul kolom: `Primary Key`, `Hijau Tua`, `Hijau`, `Kuning`, `Oranye`, `Merah`. Satu baris per indikator, tulis ambangnya seperti di dashboard:
+
+| Primary Key | Hijau Tua | Hijau | Kuning | Oranye | Merah |
+|---|---|---|---|---|---|
+| OPS-00000007 | x ≤ 10% | 10% < x ≤ 20% | 20% < x ≤ 35% | 35% < x ≤ 50% | x > 50% |
+| OPS-00000001 | 340 < x ≤ 380 | | 300 < x ≤ 340; 380 < x ≤ 420 | | x ≤ 300; x > 420 |
+
+- Pakai `%` untuk indikator persen, tanpa `%` untuk rasio (NOC/AO, Kelompok/AO). Desimal pakai koma (`1,4%`).
+- Beberapa rentang untuk satu warna dipisah titik koma. Warna yang tidak dipakai dikosongkan.
+- Kalau ambang tumpang tindih atau ada nilai yang tidak masuk warna mana pun, update **berhenti** dengan pesan error di tab Actions.
+
+---
+
 ## 📁 Cara Tambah File Dokumen Baru
 
 1. **Upload file** ke folder `public/files/` di GitHub

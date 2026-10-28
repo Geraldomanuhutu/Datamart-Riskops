@@ -65,14 +65,18 @@ Saran implementasi: tambah kolom metadata di sheet DATAMART (mis. `Arah`, `Satua
 ## Status perbaikan
 
 - **Bug 3–6 sudah dikerjakan (27 Okt 2026, belum di-commit/deploy saat ditulis).** `data.js` sekarang punya per baris: `arah` (naik/turun/netral, hanya Hasil), `sat` (%/rasio/angka, dibaca dari number format sel Excel), `num` (nilai presisi penuh per periode), `src` + `url` (menggantikan `lnk`). Nilai tampilan diformat gaya Indonesia ("44,35%", "15.710.335").
-- Arah dibaca dari kolom header `Arah` di sheet DATAMART kalau ada; kalau belum ada atau selnya kosong, pakai `ARAH_DEFAULT` di `update_data.py` (jawaban pemilik 27 Okt 2026: NOC/AO, Kelompok/AO, Turn Over, AO ≤3 Bln, Anggota Tidak Sesuai, Temuan, Klaim CIS CIT, Pencairan diluar PKM = turun baik; Full Payment, Face Detect, KTP & FP4, DRTD, DC H+0 = naik baik).
+- Arah dibaca dari kolom header `Arah` di sheet DATAMART kalau ada; kalau belum ada atau selnya kosong, pakai `ARAH_DEFAULT` di `update_data.py` (jawaban pemilik 27–28 Okt 2026: NOC/AO & Kelompok/AO = target (ambang dua sisi, mendekati pita hijau tua = baik); Turn Over, AO ≤3 Bln, Anggota Tidak Sesuai, Temuan, Klaim CIS CIT, Pencairan diluar PKM = turun baik; Full Payment, Face Detect, KTP & FP4, DRTD, DC H+0 = naik baik).
+- **Threshold + status RAG sudah dikerjakan (28 Okt 2026).** Ambang dari dashboard KRI pemilik (5 warna: hijau tua, hijau, kuning, oranye, merah). Sumber: sheet opsional `THRESHOLD` (header `Primary Key`, `Hijau Tua`, `Hijau`, `Kuning`, `Oranye`, `Merah`; isi notasi seperti `300 < x ≤ 340`, beberapa rentang dipisah `;`), fallback `THRESHOLD_DEFAULT`. `data.js` Hasil punya `thr` (pita urut legenda), `tgt` (pita target), `st` (status per periode). Ambang tumpang tindih / nilai jatuh di celah → warning (CI gagal). Celah hanya terdeteksi kalau ada nilai yang jatuh di sana.
+- Belum ada ambang: Kelengkapan KTP & FP4, Identitas DRTD, % Klaim CIS CIT, % Pencairan diluar hari PKM (tampil abu-abu). "Temuan Mekaar Belum Tindak Lanjut" = "% Belum TLHP (Mekaar)" di dashboard (dikonfirmasi pemilik).
+- Di dashboard tapi belum ada baris di DATAMART: Turn Over AO Monthly, % Belum TLHP ULaMM, % Pendingan Pekerjaan Notaris, dan 7 KRI IT (Pentest, Storage, Lisensi, Respond & Resolution, Downtime Jaringan, Downtime MEKDI BO).
+- Kartu ringkasan sekarang grid semua indikator Hasil (minor poin "hanya 4 kartu" selesai).
 - Tren satuan % ditampilkan sebagai selisih poin persen (pp).
 - Hyperlink di kolom E Excel berupa path SharePoint relatif → tidak dirender sebagai link.
 - Jangan simpan ulang Excel lewat openpyxl: ada 80 sel formula, nilai cache-nya hilang dan CI membaca sel kosong.
 
 ## Pertanyaan terbuka (jangan ditebak, tanya user)
 
-- Ada threshold / risk appetite resmi per KRI?
+- Ambang untuk 4 indikator yang belum punya (lihat Status perbaikan).
 - Siapa user utama portal dan keputusan apa yang mereka ambil dari sini?
 - Dokumen asli LAPORAN ada di mana (upload ke `public/files/` vs link SharePoint asli)?
 
