@@ -658,13 +658,24 @@ function docCardsHtml(docs,title){
 // Pecah teks jadi kata di setiap karakter non-alfanumerik: "NOC/AO" → ["noc","ao"], bukan "nocao".
 function toks(s){return String(s).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);}
 function kwds(ql){var stops=['berapa','nilai','data','angka','bulan','ini','terakhir','terbaru','periode','tampilkan','lihat','cari','dong','nih','tren','trend','dari','yang','untuk','pada','di','dan','atau','dengan','nya'];return toks(ql).filter(function(w){return w.length>1&&!stops.includes(w)});}
-// Skor kecocokan: kata utuh = panjang kata; kata ≥4 huruf boleh cocok sebagian (mis. "cair" → "pencairan").
-// Token pendek seperti "ao" hanya cocok sebagai kata utuh. Kalau semua kata kunci muncul berurutan, skor ×2.
+// Semua kata utuh di nama parameter dan dokumen portal (dibangun sekali, saat pencarian pertama).
+var VOCAB=null;
+function vocab(){
+  if(VOCAB)return VOCAB;
+  VOCAB={};
+  DB.rows.forEach(function(r){toks(r.par+' '+r.bag).forEach(function(t){VOCAB[t]=1})});
+  DB.laporan.forEach(function(f){toks(f.nama+' '+f.desc+' '+f.kat).forEach(function(t){VOCAB[t]=1})});
+  return VOCAB;
+}
+// Skor kecocokan: kata utuh = panjang kata. Kata ≥4 huruf boleh cocok sebagian (mis. "cair" → "pencairan"),
+// tapi hanya kalau kata itu tidak ada sebagai kata utuh di portal — jadi "over" (dari "Turn Over") tidak
+// ikut mencocokkan "tercover". Token pendek seperti "ao" hanya cocok sebagai kata utuh.
+// Kalau semua kata kunci muncul berurutan, skor ×2.
 function kwScore(kws,text){
-  var tt=toks(text),s=0;
+  var tt=toks(text),s=0,v=vocab();
   kws.forEach(function(k){
     if(tt.indexOf(k)>=0)s+=k.length;
-    else if(k.length>=4&&tt.some(function(t){return t.indexOf(k)>=0}))s+=k.length-1;
+    else if(k.length>=4&&!v[k]&&tt.some(function(t){return t.indexOf(k)>=0}))s+=k.length-1;
   });
   if(s&&kws.length>1&&(' '+tt.join(' ')+' ').indexOf(' '+kws.join(' ')+' ')>=0)s*=2;
   return s;
