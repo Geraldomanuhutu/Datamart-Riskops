@@ -72,6 +72,7 @@ Saran implementasi: tambah kolom metadata di sheet DATAMART (mis. `Arah`, `Satua
 - Kartu ringkasan sekarang grid semua indikator Hasil (minor poin "hanya 4 kartu" selesai).
 - Tren satuan % ditampilkan sebagai selisih poin persen (pp).
 - Hyperlink di kolom E Excel berupa path SharePoint relatif → tidak dirender sebagai link.
+- **Bug 2 sebagian (28 Okt 2026):** periode 202606–202609 diisi dari Google Sheet pemilik "Datamart OPS_Update Sept" (header baris 1, layout beda dari Excel) lewat Excel COM, bukan openpyxl. Excel tetap sumber resmi; pemilik yang update ke depannya. KTP & FP4, DRTD, Klaim CIS CIT, Pencairan diluar PKM belum punya data baru di sheet itu. NOC/AO dan Kelompok/AO 202606+ di sheet berupa bilangan bulat (bukan hasil bagi presisi).
 - Jangan simpan ulang Excel lewat openpyxl: ada 80 sel formula, nilai cache-nya hilang dan CI membaca sel kosong.
 
 ## Pertanyaan terbuka (jangan ditebak, tanya user)
